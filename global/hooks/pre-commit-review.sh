@@ -1,12 +1,13 @@
 #!/bin/bash
-# PreToolUse hook: BLOCKS git commit until auto-checks pass and self-review is completed.
+# PreToolUse hook: BLOCKS git commit until all automated checks pass.
 # Universal version — auto-detects project stack (Python, TypeScript, Go, Rust, Node).
 #
-# Phase 1 (auto-checks, no bypass):
+# Phase 1 (linters + tests, no bypass):
 #   Detects staged file types + project markers → runs relevant linters/tests.
 #   Timeout on each command. Blocks on failure.
-# Phase 2 (review checklist, marker bypass):
-#   Advisory checklist — AI reviews then sets marker to proceed.
+# Phase 2 (diff analysis, no bypass):
+#   Greps staged diff for AI anti-patterns: `any` types, empty catch, TODO/FIXME,
+#   large commits (>500 lines), missing migrations, new files without tests.
 #
 # DOUBLE-FIRE PREVENTION: if project-level .claude/hooks/pre-commit-review.sh exists,
 # this hook exits 0 immediately — the project hook takes precedence.
@@ -40,21 +41,8 @@ if [ -f ".claude/hooks/pre-commit-review.sh" ]; then
   exit 0
 fi
 
-# WHY per-repo marker: prevents cross-repo marker reuse.
-REPO_HASH=$(pwd | cksum | cut -d' ' -f1)
-MARKER="/tmp/claude-commit-reviewed-$REPO_HASH"
-
-# If marker exists, review was done — allow commit and clean up
-# WHY 5-minute expiry: prevents stale markers from crashed sessions.
-# WHY rm before exit 0: marker is single-use — each commit needs fresh review.
-if [ -f "$MARKER" ]; then
-  if [ -n "$(find "$MARKER" -mmin +5 2>/dev/null)" ]; then
-    rm -f "$MARKER"
-  else
-    rm -f "$MARKER"
-    exit 0
-  fi
-fi
+# WHY no marker bypass: both phases are now fully automated (objective pass/fail).
+# Old Phase 2 was advisory checklist that AI rubber-stamped with `touch marker`.
 
 # Analyze what's being committed
 STAGED=$(git diff --cached --name-only 2>/dev/null)
@@ -288,46 +276,52 @@ if [ -n "$AUTO_ERRORS" ]; then
   exit 2
 fi
 
-# === Phase 2: Manual review checklist (marker bypass) ===
-# WHY marker bypass here but not Phase 1: checklist is advisory — AI signals completion via marker.
-{
-  echo "COMMIT BLOCKED — Self-review required ($STAT)"
+# === Phase 2: Automated diff analysis (no marker bypass) ===
+# WHY automated: old Phase 2 was advisory checklist that AI rubber-stamped.
+# These checks grep the staged diff for patterns that indicate AI mistakes.
+DIFF_WARNINGS=""
+DIFF=$(git diff --cached -U0 2>/dev/null)
 
-  # WHY use PASSED from Phase 1: only shows checks that actually ran and succeeded.
-  # Previously this section rebuilt the list from flags, showing "tsc ✓" even when
-  # tsc was skipped (no tsconfig) or "ruff ✓" when ruff wasn't installed.
-  [ -n "$PASSED" ] && echo "Auto-checks passed: $PASSED"
-  echo ""
-
-  # Always required
-  echo "1. REVIEW: Check git diff --cached — no debug code, secrets, or unrelated changes"
-
-  STEP=2
-  if $HAS_MODEL; then
-    echo "$STEP. MODEL CHANGED: Did you create a migration?"
-    STEP=$((STEP + 1))
+# WHY `any` check: AI uses `any` when the correct type is complex. Always wrong in strict TS.
+if $HAS_TS; then
+  ANY_TYPES=$(echo "$DIFF" | grep '^\+' | grep -v '^+++' | grep -E ':\s*any\b|<any>|as any' | grep -v '//.*any' | head -5)
+  if [ -n "$ANY_TYPES" ]; then
+    DIFF_WARNINGS="${DIFF_WARNINGS}\nTYPE 'any' FOUND in staged TS changes — use proper types:\n$(echo "$ANY_TYPES" | head -3)"
   fi
-  if $HAS_MIGRATION; then
-    echo "$STEP. MIGRATION: Verify both upgrade() and downgrade() exist and are correct"
-    STEP=$((STEP + 1))
-  fi
+fi
 
-  # Ripple check for multi-file changes
-  if [ "$FILE_COUNT" -gt 3 ]; then
-    echo "$STEP. RIPPLE: $FILE_COUNT files changed — did you grep ALL callers of modified functions?"
-    STEP=$((STEP + 1))
-  fi
+# WHY empty catch: AI writes `catch (e) {}` or `except:` — swallows errors silently.
+EMPTY_CATCH=$(echo "$DIFF" | grep '^\+' | grep -v '^+++' | grep -E 'catch\s*(\([^)]*\))?\s*\{\s*\}|except:\s*$' | head -3)
+if [ -n "$EMPTY_CATCH" ]; then
+  DIFF_WARNINGS="${DIFF_WARNINGS}\nEMPTY CATCH/EXCEPT found — add error handling:\n$(echo "$EMPTY_CATCH" | head -3)"
+fi
 
-  echo "$STEP. LEARNINGS: Any mistakes worth logging? Update improvement-log.md if yes"
+# WHY TODO/FIXME: AI leaves these as notes-to-self that never get fixed.
+TODO_LINES=$(echo "$DIFF" | grep '^\+' | grep -v '^+++' | grep -v 'ROADMAP' | grep -iE '\bTODO\b|\bFIXME\b|\bHACK\b|\bXXX\b' | head -3)
+if [ -n "$TODO_LINES" ]; then
+  DIFF_WARNINGS="${DIFF_WARNINGS}\nTODO/FIXME/HACK found in staged changes — resolve before committing:\n$(echo "$TODO_LINES" | head -3)"
+fi
 
-  # Model changed but no migration staged = warning
-  if $HAS_MODEL && ! $HAS_MIGRATION; then
+# WHY commit size check: large commits = AI lost overview, likely missed something.
+DIFF_LINES=$(echo "$DIFF" | grep -c '^\+' || true)
+if [ "$DIFF_LINES" -gt 500 ]; then
+  DIFF_WARNINGS="${DIFF_WARNINGS}\nLARGE COMMIT: $DIFF_LINES lines added. Consider splitting into smaller commits."
+fi
+
+# WHY missing migration: model changes without migration = broken DB on deploy.
+if $HAS_MODEL && ! $HAS_MIGRATION; then
+  DIFF_WARNINGS="${DIFF_WARNINGS}\nMISSING MIGRATION: entities.py/models.py changed but no migration file staged!"
+fi
+
+if [ -n "$DIFF_WARNINGS" ]; then
+  {
+    echo "COMMIT BLOCKED — Diff analysis found issues ($STAT)"
     echo ""
-    echo "WARNING: entities.py/models.py changed but NO migration file staged!"
-  fi
+    echo -e "$DIFF_WARNINGS"
+    echo ""
+    echo "Fix the issues above, then retry commit."
+  } >&2
+  exit 2
+fi
 
-  echo ""
-  echo "After review: touch $MARKER && retry commit"
-} >&2
-
-exit 2
+exit 0

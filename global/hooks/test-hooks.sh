@@ -41,11 +41,11 @@ echo '{"tool_name":"Bash","tool_input":{"command":"grep git commit README"}}' | 
 check "'grep git commit' → allowed (not real commit)" 0 $?
 
 # WHY: chained commit after another command should be detected
-# WHY needs git repo with staged files: hook exits 0 on empty STAGED (nothing to review)
+# WHY needs git repo with staged files containing anti-patterns so Phase 2 blocks
 TMPCHAIN=$(mktemp -d)
-(cd "$TMPCHAIN" && git init -q && git config user.email "test@test.com" && git config user.name "Test" && echo "hi" > file.txt && git add file.txt) >/dev/null 2>&1
+(cd "$TMPCHAIN" && git init -q && git config user.email "test@test.com" && git config user.name "Test" && echo "# TODO fix later" > file.py && git add file.py) >/dev/null 2>&1
 echo '{"tool_name":"Bash","tool_input":{"command":"git add . && git commit -m test"}}' | (cd "$TMPCHAIN" && bash "$HOOKS_DIR/pre-commit-review.sh") >/dev/null 2>&1
-check "'git add && git commit' → detected as commit" 2 $?
+check "'git add && git commit' → detected as commit (blocked by Phase 2 TODO)" 2 $?
 rm -rf "$TMPCHAIN"
 
 # === Double-fire prevention ===
@@ -64,30 +64,60 @@ check "git commit with project-level hook → skipped (double-fire)" 0 $?
 
 rm -rf "$TMPPROJECT"
 
-# === Marker bypass ===
+# === Phase 2: diff analysis ===
 echo ""
-echo "--- pre-commit-review.sh: marker bypass ---"
+echo "--- pre-commit-review.sh: diff analysis (Phase 2) ---"
 
+# WHY: clean file with no anti-patterns should pass both phases → exit 0
 TMPPROJECT2=$(mktemp -d)
-(cd "$TMPPROJECT2" && git init -q && git config user.email "test@test.com" && git config user.name "Test" && echo "hello" > file.txt && git add file.txt) >/dev/null 2>&1
-REPO_HASH=$(cd "$TMPPROJECT2" && pwd | cksum | cut -d' ' -f1)
-MARKER="/tmp/claude-commit-reviewed-$REPO_HASH"
-
-# Without marker — should block (Phase 2)
+(cd "$TMPPROJECT2" && git init -q && git config user.email "test@test.com" && git config user.name "Test" && echo "const x: number = 1;" > file.ts && git add file.ts) >/dev/null 2>&1
 echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m test"}}' | (cd "$TMPPROJECT2" && bash "$HOOKS_DIR/pre-commit-review.sh") >/dev/null 2>&1
-check "git commit without marker → blocked (Phase 2)" 2 $?
-
-# With marker — should allow
-touch "$MARKER"
-echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m test"}}' | (cd "$TMPPROJECT2" && bash "$HOOKS_DIR/pre-commit-review.sh") >/dev/null 2>&1
-check "git commit with marker → allowed" 0 $?
-
-# Marker should be consumed (single-use)
-echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m test"}}' | (cd "$TMPPROJECT2" && bash "$HOOKS_DIR/pre-commit-review.sh") >/dev/null 2>&1
-check "git commit after marker consumed → blocked again" 2 $?
-
+check "clean TS file → allowed (no Phase 1 or Phase 2 issues)" 0 $?
 rm -rf "$TMPPROJECT2"
-rm -f "$MARKER"
+
+# WHY: `any` type in staged TS should be caught by Phase 2
+TMPPROJECT2=$(mktemp -d)
+(cd "$TMPPROJECT2" && git init -q && git config user.email "test@test.com" && git config user.name "Test" && echo "const x: any = 1;" > file.ts && git add file.ts) >/dev/null 2>&1
+STDERR_ANY=$(echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m test"}}' | (cd "$TMPPROJECT2" && bash "$HOOKS_DIR/pre-commit-review.sh") 2>&1 >/dev/null)
+RESULT=$?
+if [ "$RESULT" -eq 2 ] && echo "$STDERR_ANY" | grep -qi "any"; then
+  echo "  PASS: TS with 'any' type → blocked by Phase 2"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: TS with 'any' should be blocked (exit=$RESULT)"
+  FAIL=$((FAIL + 1))
+fi
+rm -rf "$TMPPROJECT2"
+
+# WHY: TODO in staged diff should be caught
+TMPPROJECT2=$(mktemp -d)
+(cd "$TMPPROJECT2" && git init -q && git config user.email "test@test.com" && git config user.name "Test" && echo "# TODO fix this later" > file.py && git add file.py) >/dev/null 2>&1
+STDERR_TODO=$(echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m test"}}' | (cd "$TMPPROJECT2" && bash "$HOOKS_DIR/pre-commit-review.sh") 2>&1 >/dev/null)
+RESULT=$?
+if [ "$RESULT" -eq 2 ] && echo "$STDERR_TODO" | grep -qi "TODO"; then
+  echo "  PASS: file with TODO → blocked by Phase 2"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: file with TODO should be blocked (exit=$RESULT)"
+  FAIL=$((FAIL + 1))
+fi
+rm -rf "$TMPPROJECT2"
+
+# WHY: empty catch {} should be caught
+TMPPROJECT2=$(mktemp -d)
+(cd "$TMPPROJECT2" && git init -q && git config user.email "test@test.com" && git config user.name "Test")  >/dev/null 2>&1
+echo 'try { x() } catch (e) {}' > "$TMPPROJECT2/file.ts"
+(cd "$TMPPROJECT2" && git add file.ts) >/dev/null 2>&1
+STDERR_CATCH=$(echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m test"}}' | (cd "$TMPPROJECT2" && bash "$HOOKS_DIR/pre-commit-review.sh") 2>&1 >/dev/null)
+RESULT=$?
+if [ "$RESULT" -eq 2 ] && echo "$STDERR_CATCH" | grep -qi "catch"; then
+  echo "  PASS: empty catch {} → blocked by Phase 2"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: empty catch should be blocked (exit=$RESULT)"
+  FAIL=$((FAIL + 1))
+fi
+rm -rf "$TMPPROJECT2"
 
 # =============================================
 echo ""

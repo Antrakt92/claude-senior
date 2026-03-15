@@ -52,7 +52,18 @@ Fix issues silently before presenting. Don't show broken code.
 
 **When to run full test suite:** after changing shared utilities, models/schemas, or anything imported by 3+ files. Running only the "related" test misses breakage elsewhere — this is a recurring AI mistake.
 
-**Re-read files before editing** if you last read them more than a few messages ago. Stale mental model = broken edits. This is the #2 AI failure mode.
+### Read-Before-Edit Rule (MANDATORY)
+Before EVERY Edit tool call: if you haven't Read the target file in the last 3 tool calls, **Read it first**. No exceptions.
+**WHY:** AI reads a file, does 10 other things, then edits by memory. File may have changed (auto-lint reformatted, earlier edit changed line numbers). Edit fails, AI wastes 2-3 retries. This is the #2 AI failure mode.
+
+### Change Size Rule
+If your change touches **>5 files**: STOP and write a plan (TodoWrite) before continuing.
+**WHY:** Large changes without a plan = missed files, broken imports, forgotten tests. AI loses overview.
+
+### Uncertainty Disclosure Rule
+If you're unsure about ANY aspect of your implementation: **say so explicitly**.
+"I'm not sure if X handles Y correctly" is better than silently guessing wrong.
+**WHY:** AI's default is false confidence. Actively counter it. User can course-correct early.
 
 **After context compression** — re-orient via `git diff`. Use TodoWrite for 3+ step tasks. One task fully complete before the next.
 
@@ -62,6 +73,15 @@ If approach fails 3 times: **STOP**.
 2. Re-read the original goal — you may be solving the wrong problem
 3. Try the OPPOSITE of what hasn't been working, or a fundamentally different strategy
 4. If still stuck — tell the user what you tried, what failed, and what you think the issue is
+
+### Test Failure Recovery Protocol
+When a test fails:
+1. Read the **FULL** error message (not just the last line)
+2. Read the **test file** to understand what it expects
+3. Read the **source file** being tested
+4. Only THEN attempt a fix
+
+**NEVER:** change the test to match broken code. **NEVER:** retry the same fix with minor tweaks.
 
 **Anti-patterns:** repeating failed approaches with small tweaks, multiple unrelated changes at once.
 
@@ -141,7 +161,7 @@ These fire in EVERY project via `~/.claude/settings.json`. Don't duplicate in pr
 
 - **block-dangerous-git.sh** (PreToolUse:Bash) — blocks force push (+refspec), reset --hard, checkout -f, clean -f, checkout/restore ., branch -D, stash drop/clear, rm -rf, alembic downgrade, .env/.envrc writes. Strips commit -m content before matching. Per-operation marker bypass.
 - **block-protected-files.sh** (PreToolUse:Edit|Write) — blocks .env* (not .env.example/.env-example) and lock files.
-- **pre-commit-review.sh** (PreToolUse:Bash) — universal pre-commit: auto-detects stack (Python/TS/Go/Rust/Node), runs linters+tests (Phase 1, no bypass), then review checklist (Phase 2, marker bypass). Skips if project-level `.claude/hooks/pre-commit-review.sh` exists.
+- **pre-commit-review.sh** (PreToolUse:Bash) — universal pre-commit: auto-detects stack (Python/TS/Go/Rust/Node). Phase 1: linters+tests (no bypass). Phase 2: diff analysis — `any` types, empty catch, TODO/FIXME, large commits >500 lines, missing migrations (no bypass). Skips if project-level `.claude/hooks/pre-commit-review.sh` exists.
 - **auto-lint-python.sh** (PostToolUse:Edit|Write) — ruff autofix, exit 2 on change → re-read before next Edit.
 - **auto-lint-typescript.sh** (PostToolUse:Edit|Write) — ESLint --fix on .ts/.tsx. Walks up directory tree for config. Same md5sum/exit 2 pattern. Skips if project-level `.claude/hooks/auto-lint-typescript.sh` exists.
 - **ripple-check.sh** (PostToolUse:Edit|Write) — extracts function/class/const names from edited file, greps codebase for usages. Non-blocking (exit 0), warns via stderr. <3s timeout, max 5 warnings.
