@@ -284,7 +284,10 @@ DIFF=$(git diff --cached -U0 2>/dev/null)
 
 # WHY `any` check: AI uses `any` when the correct type is complex. Always wrong in strict TS.
 if $HAS_TS; then
-  ANY_TYPES=$(echo "$DIFF" | grep '^\+' | grep -v '^+++' | grep -E ':\s*any\b|<any>|as any' | grep -v '//.*any' | head -5)
+  # WHY [=,]\s*any\b: catches type aliases (type X = any) and generic params (Record<string, any>)
+  # that the original :\s*any pattern missed. Low false-positive risk: `any` as a variable name
+  # is extremely unusual in TS (reserved type keyword).
+  ANY_TYPES=$(echo "$DIFF" | grep '^\+' | grep -v '^+++' | grep -E ':\s*any\b|<any>|as any|[=,]\s*any\b' | grep -v '//.*any' | head -5)
   if [ -n "$ANY_TYPES" ]; then
     DIFF_WARNINGS="${DIFF_WARNINGS}\nTYPE 'any' FOUND in staged TS changes — use proper types:\n$(echo "$ANY_TYPES" | head -3)"
   fi

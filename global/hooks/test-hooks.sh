@@ -119,6 +119,62 @@ else
 fi
 rm -rf "$TMPPROJECT2"
 
+# WHY: type aliases using `any` should be caught (= any pattern)
+TMPPROJECT2=$(mktemp -d)
+(cd "$TMPPROJECT2" && git init -q && git config user.email "test@test.com" && git config user.name "Test" && echo "type Config = any;" > file.ts && git add file.ts) >/dev/null 2>&1
+STDERR_EQANY=$(echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m test"}}' | (cd "$TMPPROJECT2" && bash "$HOOKS_DIR/pre-commit-review.sh") 2>&1 >/dev/null)
+RESULT=$?
+if [ "$RESULT" -eq 2 ] && echo "$STDERR_EQANY" | grep -qi "any"; then
+  echo "  PASS: 'type X = any' → blocked by Phase 2"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: 'type X = any' should be blocked (exit=$RESULT)"
+  FAIL=$((FAIL + 1))
+fi
+rm -rf "$TMPPROJECT2"
+
+# WHY: generic params with `any` should be caught (, any pattern)
+TMPPROJECT2=$(mktemp -d)
+(cd "$TMPPROJECT2" && git init -q && git config user.email "test@test.com" && git config user.name "Test" && echo 'const data: Record<string, any> = {};' > file.ts && git add file.ts) >/dev/null 2>&1
+STDERR_COMMAANY=$(echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m test"}}' | (cd "$TMPPROJECT2" && bash "$HOOKS_DIR/pre-commit-review.sh") 2>&1 >/dev/null)
+RESULT=$?
+if [ "$RESULT" -eq 2 ] && echo "$STDERR_COMMAANY" | grep -qi "any"; then
+  echo "  PASS: 'Record<string, any>' → blocked by Phase 2"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: 'Record<string, any>' should be blocked (exit=$RESULT)"
+  FAIL=$((FAIL + 1))
+fi
+rm -rf "$TMPPROJECT2"
+
+# WHY: commits >500 added lines should trigger size warning
+TMPPROJECT2=$(mktemp -d)
+(cd "$TMPPROJECT2" && git init -q && git config user.email "test@test.com" && git config user.name "Test" && seq 1 600 | awk '{print "line " $1}' > bigfile.txt && git add bigfile.txt) >/dev/null 2>&1
+STDERR_SIZE=$(echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m test"}}' | (cd "$TMPPROJECT2" && bash "$HOOKS_DIR/pre-commit-review.sh") 2>&1 >/dev/null)
+RESULT=$?
+if [ "$RESULT" -eq 2 ] && echo "$STDERR_SIZE" | grep -qi "LARGE"; then
+  echo "  PASS: >500 lines → blocked by Phase 2"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: >500 lines should be blocked (exit=$RESULT)"
+  FAIL=$((FAIL + 1))
+fi
+rm -rf "$TMPPROJECT2"
+
+# WHY: entities.py changed without migration file should warn
+TMPPROJECT2=$(mktemp -d)
+(cd "$TMPPROJECT2" && git init -q && git config user.email "test@test.com" && git config user.name "Test" && echo "class User: pass" > entities.py && git add entities.py) >/dev/null 2>&1
+STDERR_MIG=$(echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m test"}}' | (cd "$TMPPROJECT2" && bash "$HOOKS_DIR/pre-commit-review.sh") 2>&1 >/dev/null)
+RESULT=$?
+if [ "$RESULT" -eq 2 ] && echo "$STDERR_MIG" | grep -qi "MIGRATION"; then
+  echo "  PASS: entities.py without migration → blocked by Phase 2"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: entities.py without migration should warn (exit=$RESULT)"
+  FAIL=$((FAIL + 1))
+fi
+rm -rf "$TMPPROJECT2"
+
 # =============================================
 echo ""
 echo "=== auto-lint-typescript.sh ==="
@@ -456,6 +512,17 @@ check "Edit package-lock.json → blocked" 2 $?
 
 echo '{"tool_name":"Edit","tool_input":{"file_path":"/project/src/app.ts"}}' | bash "$HOOKS_DIR/block-protected-files.sh" >/dev/null 2>&1
 check "Edit app.ts → allowed" 0 $?
+
+# WHY: Write tool uses same file_path extraction — verify it also blocks
+echo '{"tool_name":"Write","tool_input":{"file_path":"/project/.env","content":"SECRET=x"}}' | bash "$HOOKS_DIR/block-protected-files.sh" >/dev/null 2>&1
+check "Write .env → blocked" 2 $?
+
+echo '{"tool_name":"Write","tool_input":{"file_path":"/project/.env.example","content":"FOO=bar"}}' | bash "$HOOKS_DIR/block-protected-files.sh" >/dev/null 2>&1
+check "Write .env.example → allowed" 0 $?
+
+# WHY: git stash drop with specific ref should also be blocked
+echo '{"tool_name":"Bash","tool_input":{"command":"git stash drop stash@{0}"}}' | bash "$HOOKS_DIR/block-dangerous-git.sh" >/dev/null 2>&1
+check "git stash drop stash@{0} → blocked" 2 $?
 
 # =============================================
 echo ""
