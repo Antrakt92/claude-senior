@@ -2,6 +2,14 @@
 
 A battle-tested enforcement system for Claude Code that makes AI agents self-reviewing, self-correcting, and safe by default. Built for AI-only workflows where the developer directs and the AI implements everything autonomously.
 
+<p align="center">
+  <a href="assets/demo.svg">
+    <img src="assets/demo.svg" alt="Demo: hook blocking rm -rf on source directory" width="780">
+  </a>
+  <br>
+  <em>Click to see animated demo (3 scenes)</em>
+</p>
+
 ## The Problem
 
 Claude Code with `bypassPermissions: true` can run any command without asking. One hallucinated `rm -rf src/` or `git push --force` and your work is gone. CLAUDE.md rules help, but AI follows them ~80% of the time — and degrades in long conversations.
