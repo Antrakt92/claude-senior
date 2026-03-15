@@ -1,8 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 520">
   <style>
-    @keyframes typing1 { from { width: 0 } to { width: 100% } }
-    @keyframes blink { 0%,100% { opacity: 1 } 50% { opacity: 0 } }
-    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
     @keyframes scene1 { 0%,30% { opacity: 1 } 33%,100% { opacity: 0 } }
     @keyframes scene2 { 0%,33% { opacity: 0 } 36%,63% { opacity: 1 } 66%,100% { opacity: 0 } }
     @keyframes scene3 { 0%,66% { opacity: 0 } 69%,97% { opacity: 1 } 100% { opacity: 0 } }
@@ -32,85 +29,87 @@
   <circle cx="20" cy="18" r="6" fill="#ff5f57"/>
   <circle cx="40" cy="18" r="6" fill="#febc2e"/>
   <circle cx="60" cy="18" r="6" fill="#28c840"/>
-  <text x="410" y="22" text-anchor="middle" class="terminal dim" font-size="12">claude-guardrails demo</text>
+  <text x="410" y="22" text-anchor="middle" class="terminal dim" font-size="12">claude-code-config</text>
 
-  <!-- Scene 1: rm_rf blocked -->
+  <!-- Scene 1: Pre-commit quality gate (MAIN scene) -->
   <g class="scene1">
-    <text x="20" y="70" class="terminal dim">~/myproject</text>
+    <text x="20" y="70" class="terminal dim">~/project</text>
+
+    <text x="20" y="100" class="terminal prompt">claude &gt;</text>
+    <text x="110" y="100" class="terminal cmd">git commit -m "feat: add tax calculator"</text>
+
+    <text x="20" y="140" class="terminal info">&#x2501; Phase 1: automated quality checks &#x2501;</text>
+    <text x="20" y="168" class="terminal success">&#x2713; ruff check &#x2014; passed</text>
+    <text x="20" y="188" class="terminal success">&#x2713; pytest tests/ -x &#x2014; 247 passed</text>
+    <text x="20" y="208" class="terminal success">&#x2713; tsc --noEmit &#x2014; passed</text>
+    <text x="20" y="228" class="terminal success">&#x2713; eslint --max-warnings 0 &#x2014; passed</text>
+
+    <text x="20" y="266" class="terminal info">&#x2501; Phase 2: self-review checklist &#x2501;</text>
+    <text x="20" y="294" class="terminal white">1. DIFF: no debug code, no secrets, no console.log</text>
+    <text x="20" y="314" class="terminal white">2. RIPPLE: grep all callers of modified functions</text>
+    <text x="20" y="334" class="terminal white">3. MODELS: entities.py changed? &#x2192; create migration</text>
+    <text x="20" y="354" class="terminal white">4. LEARNINGS: any mistakes worth saving to memory?</text>
+
+    <text x="20" y="392" class="terminal marker">touch /tmp/claude-commit-reviewed-a3f19 &amp;&amp; retry</text>
+
+    <text x="20" y="430" class="terminal dim">AI completes review, touches marker, retries commit...</text>
+    <text x="20" y="458" class="terminal success">&#x2713; Commit successful: feat: add tax calculator</text>
+
+    <text x="20" y="500" class="terminal dim" font-size="11">scene 1/3 &#x2022; auto-cycles every 5s &#x2022; code cannot land without passing all checks</text>
+  </g>
+
+  <!-- Scene 2: Auto-lint in action -->
+  <g class="scene2">
+    <text x="20" y="70" class="terminal dim">~/project</text>
+
+    <text x="20" y="100" class="terminal prompt">claude &gt;</text>
+    <text x="110" y="100" class="terminal cmd">Edit backend/app/services/tax_calculator.py</text>
+
+    <text x="20" y="140" class="terminal dim">AI writes new calculate_gains() function...</text>
+    <text x="20" y="160" class="terminal dim">File saved.</text>
+
+    <text x="20" y="200" class="terminal info">&#x2501; PostToolUse: auto-lint-python.sh &#x2501;</text>
+    <text x="20" y="228" class="terminal dim">$ ruff check --fix tax_calculator.py</text>
+    <text x="20" y="248" class="terminal dim">$ ruff format tax_calculator.py</text>
+
+    <text x="20" y="286" class="terminal warn">AUTO-LINT: Ruff reformatted tax_calculator.py</text>
+    <text x="20" y="306" class="terminal warn">Re-read the file before your next edit.</text>
+
+    <text x="20" y="344" class="terminal dim">AI automatically re-reads the formatted file...</text>
+    <text x="20" y="372" class="terminal success">&#x2713; File re-read. Continuing with next edit.</text>
+
+    <text x="20" y="412" class="terminal dim">Same flow for TypeScript:</text>
+    <text x="20" y="432" class="terminal white">auto-lint-typescript.sh &#x2192; eslint --fix &#x2192; re-read</text>
+
+    <text x="20" y="500" class="terminal dim" font-size="11">scene 2/3 &#x2022; auto-cycles every 5s &#x2022; formatting happens automatically, zero friction</text>
+  </g>
+
+  <!-- Scene 3: Safety net -->
+  <g class="scene3">
+    <text x="20" y="70" class="terminal dim">~/project</text>
 
     <text x="20" y="100" class="terminal prompt">claude &gt;</text>
     <text x="110" y="100" class="terminal cmd">Let me clean up the old source files...</text>
 
     <text x="20" y="130" class="terminal dim">$ rm -rf src/</text>
 
-    <text x="20" y="170" class="terminal blocked">BLOCKED: rm -rf can permanently delete source files.</text>
-    <text x="20" y="190" class="terminal blocked">Verify the target directory is correct.</text>
-    <text x="20" y="220" class="terminal dim">If user explicitly requested this:</text>
-    <text x="20" y="240" class="terminal marker">touch /tmp/claude-dangerous-op-28491-73621 &amp;&amp; retry</text>
+    <text x="20" y="168" class="terminal blocked">BLOCKED: rm -rf can permanently delete source files.</text>
+    <text x="20" y="188" class="terminal blocked">Verify the target directory is correct.</text>
 
-    <text x="20" y="280" class="terminal info">&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;</text>
-    <text x="20" y="310" class="terminal warn">&#x26A0; Hook: block-dangerous-git.sh (PreToolUse:Bash)</text>
-    <text x="20" y="340" class="terminal white">Source directory protected. AI cannot delete src/, backend/,</text>
-    <text x="20" y="360" class="terminal white">frontend/ — only whitelisted build artifacts (node_modules,</text>
-    <text x="20" y="380" class="terminal white">dist, __pycache__, coverage).</text>
+    <text x="20" y="226" class="terminal dim">If user explicitly requested this:</text>
+    <text x="20" y="246" class="terminal marker">touch /tmp/claude-dangerous-op-28491-73621 &amp;&amp; retry</text>
 
-    <text x="20" y="420" class="terminal dim">Chained commands checked independently:</text>
-    <text x="20" y="440" class="terminal success">&#x2713; rm -rf node_modules/ &amp;&amp; rm -rf src/  →  src/ still blocked</text>
+    <text x="20" y="284" class="terminal info">&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;</text>
+    <text x="20" y="312" class="terminal warn">&#x26A0; Also blocked by this system:</text>
 
-    <text x="20" y="490" class="terminal dim" font-size="11">scene 1/3 &#x2022; auto-cycles every 5s</text>
-  </g>
+    <text x="20" y="342" class="terminal white">&#x2022; git push --force       &#x2022; git reset --hard</text>
+    <text x="20" y="362" class="terminal white">&#x2022; git clean -f            &#x2022; git checkout .</text>
+    <text x="20" y="382" class="terminal white">&#x2022; git branch -D           &#x2022; git stash drop/clear</text>
+    <text x="20" y="402" class="terminal white">&#x2022; alembic downgrade       &#x2022; echo x &gt; .env</text>
+    <text x="20" y="422" class="terminal white">&#x2022; Edit/Write to .env*     &#x2022; Edit lock files</text>
 
-  <!-- Scene 2: git push force blocked -->
-  <g class="scene2">
-    <text x="20" y="70" class="terminal dim">~/myproject</text>
+    <text x="20" y="460" class="terminal success">&#x2713; rm -rf node_modules/  →  allowed (build artifact)</text>
 
-    <text x="20" y="100" class="terminal prompt">claude &gt;</text>
-    <text x="110" y="100" class="terminal cmd">Pushing changes to remote...</text>
-
-    <text x="20" y="130" class="terminal dim">$ git push --force origin main</text>
-
-    <text x="20" y="170" class="terminal blocked">BLOCKED: git push --force can destroy remote history.</text>
-    <text x="20" y="190" class="terminal blocked">Use --force-with-lease if you must.</text>
-
-    <text x="20" y="230" class="terminal info">&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;&#x2501;</text>
-    <text x="20" y="260" class="terminal warn">Also blocked by this hook:</text>
-
-    <text x="20" y="290" class="terminal white">&#x2022; git reset --hard    &#x2022; git clean -f</text>
-    <text x="20" y="310" class="terminal white">&#x2022; git checkout .      &#x2022; git checkout -- .</text>
-    <text x="20" y="330" class="terminal white">&#x2022; git restore .       &#x2022; git branch -D</text>
-    <text x="20" y="350" class="terminal white">&#x2022; alembic downgrade   &#x2022; echo x &gt; .env</text>
-
-    <text x="20" y="390" class="terminal dim">Smart detection:</text>
-    <text x="20" y="410" class="terminal success">&#x2713; git push --force-with-lease  →  allowed (safe variant)</text>
-    <text x="20" y="430" class="terminal success">&#x2713; git push --force-if-includes →  allowed (safe variant)</text>
-    <text x="20" y="450" class="terminal blocked">&#x2717; git push --force-with-lease --force  →  bare --force detected</text>
-
-    <text x="20" y="490" class="terminal dim" font-size="11">scene 2/3 &#x2022; auto-cycles every 5s</text>
-  </g>
-
-  <!-- Scene 3: pre_commit review flow -->
-  <g class="scene3">
-    <text x="20" y="70" class="terminal dim">~/myproject</text>
-
-    <text x="20" y="100" class="terminal prompt">claude &gt;</text>
-    <text x="110" y="100" class="terminal cmd">git commit -m "feat: add user auth"</text>
-
-    <text x="20" y="140" class="terminal success">&#x2713; Phase 1: ruff check passed</text>
-    <text x="20" y="160" class="terminal success">&#x2713; Phase 1: tsc --noEmit passed</text>
-
-    <text x="20" y="200" class="terminal blocked">COMMIT BLOCKED — Self-review required</text>
-    <text x="20" y="220" class="terminal blocked">(5 files changed, 142 insertions, 23 deletions)</text>
-
-    <text x="20" y="260" class="terminal white">1. REVIEW: Check git diff --cached — no debug code or secrets</text>
-    <text x="20" y="280" class="terminal white">2. PYTHON: cd backend &amp;&amp; pytest tests/ -x -q</text>
-    <text x="20" y="300" class="terminal white">3. RIPPLE: 5 files changed — grep ALL callers of modified functions</text>
-    <text x="20" y="320" class="terminal white">4. LEARNINGS: Any mistakes worth logging?</text>
-
-    <text x="20" y="360" class="terminal marker">After review: touch /tmp/claude-commit-reviewed-28491</text>
-
-    <text x="20" y="400" class="terminal dim">AI completes review, touches marker, retries...</text>
-    <text x="20" y="430" class="terminal success">&#x2713; Commit successful: feat: add user auth</text>
-
-    <text x="20" y="490" class="terminal dim" font-size="11">scene 3/3 &#x2022; auto-cycles every 5s</text>
+    <text x="20" y="500" class="terminal dim" font-size="11">scene 3/3 &#x2022; auto-cycles every 5s &#x2022; safety net for catastrophic mistakes</text>
   </g>
 </svg>
