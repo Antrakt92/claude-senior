@@ -9,8 +9,8 @@ You won't catch any of this — because you never read the code.
 **The solution:** 7 shell hooks and 10 behavioral rules that install into `~/.claude/` and work across all your projects. Every commit is quality-gated. Every destructive command is blocked. Every file edit triggers a ripple check.
 
 <p align="center">
-  <a href="assets/hero.svg">
-    <img src="assets/hero.svg" alt="claude-senior in action — commit blocked, force push blocked, ripple check warning" width="780">
+  <a href="assets/hero-v4.svg">
+    <img src="assets/hero-v4.svg" alt="claude-senior in action — commit blocked, force push blocked, ripple check warning" width="780">
   </a>
 </p>
 
