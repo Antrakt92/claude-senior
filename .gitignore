@@ -1,3 +1,11 @@
 # Don't commit actual secrets - only config templates
 *.env
 *.env.local
+
+# Personal project configs — originals live in each project's .claude/ dir
+# and are pushed to their own repos. No reason to duplicate here.
+projects/
+
+# Personal AI memory — originals live in ~/.claude/projects/*/memory/
+# and (for some projects) in the project repo itself.
+memory/
