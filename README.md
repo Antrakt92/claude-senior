@@ -1,194 +1,182 @@
 # claude-code-config
 
-A battle-tested enforcement system for Claude Code that makes AI agents self-reviewing, self-correcting, and safe by default. Built for AI-only workflows where the developer directs and the AI implements everything autonomously.
+A configuration system that turns Claude Code from a capable assistant into an autonomous AI developer. Behavioral rules, automated enforcement, and persistent learning — three layers that compound to give you an estimated 40-60% boost in speed, quality, and reliability over vanilla Claude Code.
 
 <p align="center">
   <a href="assets/demo.svg">
-    <img src="assets/demo.svg" alt="Demo: hook blocking rm -rf on source directory" width="780">
+    <img src="assets/demo.svg" alt="Demo: pre-commit quality gate, auto-lint, safety net" width="780">
   </a>
   <br>
   <em>Click to see animated demo (3 scenes)</em>
 </p>
 
-## The Problem
+## What it gives you
 
-Claude Code with `bypassPermissions: true` can run any command without asking. One hallucinated `rm -rf src/` or `git push --force` and your work is gone. CLAUDE.md rules help, but AI follows them ~80% of the time — and degrades in long conversations.
+| Capability | How it works |
+|------------|-------------|
+| **Full autonomy** | AI makes all technical decisions, tests, debugs, commits — you direct, it executes |
+| **Quality gate** | Every commit must pass ruff + pytest + tsc + eslint before it lands (no bypass) |
+| **Auto-formatting** | ruff/eslint auto-fix after every file edit, AI re-reads automatically |
+| **Ripple effect protection** | Hook warns when edited definitions are used elsewhere — AI's #1 failure mode |
+| **Safety net** | Force push, `reset --hard`, `rm -rf`, `.env` writes — blocked before execution |
+| **AI-specific coding rules** | Covers 12 known failure modes of AI-generated code (see below) |
+| **Persistent memory** | AI logs mistakes and learns from them across sessions |
 
-## The Solution
+## AI failure modes this system addresses
 
-Three layers of defense, each catching what the previous misses:
+Vanilla Claude Code is a strong junior developer. These are the failure modes that keep it there:
 
-| Layer | Mechanism | Enforcement |
-|-------|-----------|-------------|
-| **CLAUDE.md** | Behavioral rules (13 sections) | Advisory — AI follows most of the time |
-| **Hooks** | Shell scripts triggered on every tool call | Mandatory — `exit 2` physically blocks the action |
-| **Memory** | Persistent knowledge between sessions | Cumulative — AI learns from past mistakes |
+| When | Failure mode | What goes wrong |
+|------|-------------|-----------------|
+| Writing | **Code duplication** | Creates new helper instead of finding the existing one |
+| Writing | **Hardcoded values** | `0.33` in 5 places — updates one, forgets four |
+| Writing | **Missing types** | `def process(data, config)` — future AI passes wrong types |
+| Writing | **Implicit state** | Depends on global variable AI won't see when reading just that function |
+| Writing | **Happy-path only** | No null/empty/zero/boundary guards — no reviewer will catch it |
+| Changing | **Ripple effect (#1)** | Changes function signature, leaves 4 callers broken |
+| Changing | **Stale mental model (#2)** | Edits file from memory instead of re-reading — introduces conflicts |
+| Changing | **Stale comments** | Changes logic but not the comment above it — next AI "fixes" working code |
+| Verifying | **False confidence** | Says "fixed" without running tests — "should work" = hasn't verified |
+| Verifying | **Partial test runs** | Runs only the "related" test, misses breakage in 3 other files |
+| Debugging | **Loop-and-tweak** | Retries same failing approach with small variations instead of rethinking |
 
-Hooks are the only layer that **forces** compliance. Everything else is a suggestion.
-
-## What the Hooks Do
-
-### Global hooks (fire in every project, zero config)
-
-| Hook | Trigger | What it blocks |
-|------|---------|---------------|
-| `block-dangerous-git.sh` | PreToolUse:Bash | `git push --force`, `reset --hard`, `clean -f`, `checkout .`, `restore .`, `branch -D`, `rm -rf` on source dirs, `alembic downgrade`, writes to `.env*` files |
-| `block-protected-files.sh` | PreToolUse:Edit\|Write | Direct edits to `.env*` (not `.env.example`) and lock files (`package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`) |
-| `auto-lint-python.sh` | PostToolUse:Edit\|Write | Nothing — auto-runs `ruff check --fix` + `ruff format`, then forces AI to re-read the file before next edit |
-
-### Project hooks (per-repo, adapt to your stack)
-
-| Hook | What it does |
-|------|-------------|
-| `pre-commit-review.sh` | Two-phase commit gate. Phase 1: runs your linter/type-checker (ruff, tsc, etc.) — **blocks until code passes, no bypass**. Phase 2: shows review checklist — blocks until AI confirms review via marker file. |
-| `auto-lint-typescript.sh` | Same as auto-lint-python but for ESLint. Runs `--fix`, forces re-read on change. |
-| `check-css-variables.sh` | Warns when AI writes hard-coded hex colors, pixel values, or transitions instead of CSS variables. |
-
-### How hooks communicate with AI
-
-Claude Code in VS Code **silently discards** `exit 0` + `stdout`. The only way to talk to the AI is `exit 2` + `stderr`. Every hook in this system uses this pattern.
-
-**Marker file pattern** for "block then allow" flow:
-```
-Hook blocks with exit 2 → AI reads stderr message → AI does the review →
-AI runs: touch /tmp/claude-marker-HASH → AI retries the command → Hook sees marker → exit 0
-```
-Markers are per-operation and expire after 5 minutes (prevents stale markers from crashed sessions).
+The CLAUDE.md rules address all of these. The hooks enforce the critical ones automatically.
 
 ## Architecture
 
 ```
 ~/.claude/                              GLOBAL — all projects
-├── CLAUDE.md                           13 behavioral rules
-├── settings.json                       permissions + global hook registration
+├── CLAUDE.md                           10 behavioral rules
+├── settings.json                       permissions + hook registration
 └── hooks/
-    ├── block-dangerous-git.sh          PreToolUse:Bash
-    ├── block-protected-files.sh        PreToolUse:Edit|Write
-    └── auto-lint-python.sh             PostToolUse:Edit|Write
+    ├── block-dangerous-git.sh          PreToolUse:Bash — blocks destructive commands
+    ├── block-protected-files.sh        PreToolUse:Edit|Write — blocks .env/lockfiles
+    ├── pre-commit-review.sh            PreToolUse:Bash — quality gate on commit
+    ├── auto-lint-python.sh             PostToolUse:Edit|Write — ruff autofix
+    ├── auto-lint-typescript.sh         PostToolUse:Edit|Write — eslint autofix
+    └── ripple-check.sh                 PostToolUse:Edit|Write — caller usage warnings
 
-project/.claude/                        PROJECT — per-repo overrides
-├── settings.json                       project hook registration (no duplicates with global!)
+project/.claude/                        PROJECT — per-repo additions
+├── settings.json                       project-specific hook registration
 ├── hooks/
-│   ├── pre-commit-review.sh            PreToolUse:Bash (commit gate)
-│   ├── auto-lint-typescript.sh         PostToolUse:Edit|Write
-│   └── check-css-variables.sh          PostToolUse:Edit|Write
+│   └── check-css-variables.sh          PostToolUse:Edit|Write (example)
 └── agents/
     ├── code-reviewer.md                quality review on staged changes
     ├── security-reviewer.md            security audit (OWASP, injection, auth)
-    └── ripple-checker.md               finds all callers of changed functions
+    └── ripple-checker.md               deep caller analysis agent
 ```
 
 Both global and project hooks fire on every tool call. **Never register the same hook in both** — it will run twice.
 
-## CLAUDE.md Rules (what the AI follows)
+## Hooks
 
-13 sections covering autonomous AI behavior:
+### What each hook does
 
-| Section | Purpose |
-|---------|---------|
-| **Director Model** | User gives direction, AI makes all technical decisions |
-| **Judgment Over Execution** | Think about consequences before changing code |
-| **Session Awareness** | Check memory/git at start, re-read files before editing |
-| **Ripple Effect Rule** | Search ALL callers before changing any function/type/constant |
-| **After Writing Code** | Mandatory self-review checklist, verify before saying "done" |
-| **Scope & Simplicity** | Do exactly what was asked, follow existing patterns |
-| **Writing Code for AI** | Optimize for AI readability: descriptive names, WHY comments |
-| **Infrastructure Code** | Every regex/hook MUST have WHY comments explaining edge cases |
-| **Security Fundamentals** | Injection, XSS, auth, file upload, secrets |
-| **Recovery & Escalation** | 3-strike rule: if approach fails 3 times, stop and rethink |
-| **Self-Improvement** | Log mistakes to memory, create rules to prevent recurrence |
-| **Global Hooks** | Documents hook architecture and what fires globally |
-| **End-of-Session** | Check uncommitted changes, save handoff notes to memory |
+| Hook | Trigger | Behavior |
+|------|---------|----------|
+| `block-dangerous-git.sh` | PreToolUse:Bash | **Blocks:** `git push --force`, `reset --hard`, `clean -f`, `checkout .`, `restore .`, `branch -D`, `stash drop/clear`, `rm -rf`, `alembic downgrade`, `.env` writes |
+| `block-protected-files.sh` | PreToolUse:Edit\|Write | **Blocks:** direct edits to `.env*` (not `.env.example`) and lock files |
+| `pre-commit-review.sh` | PreToolUse:Bash | **Phase 1:** runs linter/type-checker/tests — blocks until code passes. **Phase 2:** review checklist — blocks until AI confirms via marker file |
+| `auto-lint-python.sh` | PostToolUse:Edit\|Write | Runs `ruff check --fix` + `ruff format`, forces AI to re-read on change |
+| `auto-lint-typescript.sh` | PostToolUse:Edit\|Write | Runs `eslint --fix`, forces AI to re-read on change |
+| `ripple-check.sh` | PostToolUse:Edit\|Write | Greps codebase for definitions in edited file, warns about callers (non-blocking) |
+| `check-css-variables.sh` | PostToolUse:Edit\|Write | Warns on hard-coded hex/px/transition values in CSS (project-level) |
 
-## Memory System (L0/L1/L2 Tiered Loading)
+### How hooks communicate with AI
 
-Inspired by [OpenViking](https://github.com/volcengine/OpenViking). Reduces token consumption by ~90%:
+Claude Code hooks use `exit 2` + `stderr` to send messages to the AI (`exit 0` + `stdout` is silently discarded).
 
-| Tier | What | Size | When loaded |
-|------|------|------|-------------|
-| **L0** | `MEMORY.md` index with inline summaries | ~200 tokens | Always (every conversation start) |
-| **L1** | `summary` field in file frontmatter | ~50 tokens each | Visible in L0 — AI decides relevance without opening file |
-| **L2** | Full file contents | 100-500 tokens each | Only when AI decides it needs the details |
-
-Memory file format:
-```markdown
----
-name: improvement-log
-description: Mistakes, root causes, rules created
-type: project
-summary: "5 bugs fixed: Bybit phantom SELL, Binance fee matching, CoinGecko price=0 cache poisoning..."
----
-
-[full content here]
+**Marker file pattern** for "block then allow":
 ```
+Hook blocks (exit 2) → AI reads stderr → AI does the work →
+AI runs: touch /tmp/claude-marker-HASH → retries → Hook sees marker → exit 0
+```
+Markers are per-operation and expire after 5 minutes.
+
+## CLAUDE.md Rules
+
+10 sections covering autonomous AI behavior:
+
+| # | Section | Purpose |
+|---|---------|---------|
+| 1 | **Autonomy** | AI makes all technical decisions without asking for confirmation |
+| 2 | **Judgment Over Execution** | Read callers before changing code, look up APIs when unsure |
+| 3 | **Ripple Effect Rule** | Search ALL usages before changing any function/type/constant |
+| 4 | **Verification & Resilience** | Never say "done" without fresh test evidence; 3-strike rule |
+| 5 | **Scope & Simplicity** | Follow existing patterns, use existing utilities, don't over-engineer |
+| 6 | **Writing Code for AI** | Types as documentation, named constants, WHY/WARNING/SYNC comments |
+| 7 | **Security** | CSV injection prevention, beyond Claude Code defaults |
+| 8 | **Self-Improvement** | Save corrections to memory, maintain improvement log |
+| 9 | **Global Hooks** | Documents hook architecture and config repo symlink setup |
+| 10 | **End-of-Session** | Check for uncommitted changes, save handoff notes |
+
+## Memory System
+
+AI maintains a file-based memory (`~/.claude/projects/<project>/memory/`) with an index (`MEMORY.md`) loaded every conversation. Memory files use frontmatter with `name`, `description`, and `type` fields. The AI decides which files to open based on the index — keeping token usage low while preserving cross-session learning.
+
+Types: `user` (who you are), `feedback` (corrections), `project` (ongoing work context), `reference` (external system pointers).
 
 ## Installation
 
 ### New machine setup
 
 ```bash
-git clone https://github.com/YOUR_USER/claude-code-config.git
+git clone https://github.com/Antrakt92/claude-code-config.git
 cd claude-code-config
 bash install.sh
 ```
 
-The install script copies `global/` to `~/.claude/` (backs up existing files first).
+The install script creates **symlinks** from `~/.claude/` to `global/` — edits auto-sync to the repo. Backs up existing files first. Requires Developer Mode on Windows.
 
-### Adding hooks to a project
+### Adding project-specific hooks
 
-Global hooks work automatically after install. For project-specific hooks:
+Global hooks work automatically after install. For project-specific hooks, copy from `projects/` templates:
 
-**TypeScript project** (Next.js, React, etc.):
 ```bash
-mkdir -p your-project/.claude/hooks
-cp projects/timesheet/.claude/settings.json your-project/.claude/
-cp projects/timesheet/.claude/hooks/*.sh your-project/.claude/hooks/
-```
+# TypeScript project
+cp -r projects/timesheet/.claude your-project/
 
-**Python project**:
-```bash
-mkdir -p your-project/.claude/hooks
-cp projects/clipboard-history/.claude/settings.json your-project/.claude/
-cp projects/clipboard-history/.claude/hooks/*.sh your-project/.claude/hooks/
-```
+# Python project
+cp -r projects/clipboard-history/.claude your-project/
 
-**Full stack (Python + TypeScript)**:
-```bash
+# Full stack (Python + TypeScript)
 cp -r projects/investments-calculator/.claude your-project/
 ```
 
-Then adapt: change directory paths in `pre-commit-review.sh`, adjust linter commands to match your project.
+Then adapt `pre-commit-review.sh` commands to match your stack.
 
 ## Repo Structure
 
 ```
-global/              what goes in ~/.claude/ — active global config
-projects/            reference copies of per-project .claude/ configs (3 templates)
+global/              symlinked to ~/.claude/ — active global config
+projects/            reference .claude/ configs for 3 project types
 memory/              backup of per-project AI memory files
-install.sh           setup script for new machines
+install.sh           symlink setup script
+AUDIT.md             audit prompt for systematic hook review
 ```
 
 ## Test Suite
 
-61 tests covering all hook logic:
+106 tests covering all hook logic:
 ```bash
-cd your-project && bash .claude/hooks/test-hooks.sh
+bash .claude/hooks/test-hooks.sh
 ```
 
-Tests cover: command matching, false positive/negative edge cases, JSON escape handling, chained command splitting, CSS pattern detection.
+Covers: command matching, false positive/negative edge cases, JSON escape handling, chained command splitting, CSS pattern detection, marker file lifecycle.
 
 ## Known Limitations
 
 - **String-based analysis only** — hooks can't inspect `bash script.sh` contents or `python -c "..."` payloads
-- **No variable expansion detection** — `CMD="git push --force" && $CMD` bypasses checks
-- **`rm -f -r` with split flags** — only catches `-rf`/`-r` as single flag cluster, not separate `-f -r`
+- **No variable expansion** — `CMD="git push --force" && $CMD` bypasses checks
+- **Split rm flags** — catches `-rf`/`-r` as single cluster, not separate `-f -r`
 - **CSS checker is per-line** — `linear-gradient(#fff, var(--x))` skipped because line contains `var(--`
+- **Ripple check is regex-based** — no AST parsing, may miss complex patterns or produce false positives
 
-These are documented in hook comments as `KNOWN LIMITATION` tags.
+Documented in hook comments as `KNOWN LIMITATION` tags.
 
 ## Contributing
 
-Found a bypass? Open an issue with the exact command that passes when it shouldn't. Include:
-1. The command
+Found a bypass? Open an issue with:
+1. The exact command that passes when it shouldn't
 2. Which hook should catch it
 3. Why the current regex misses it

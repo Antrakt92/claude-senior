@@ -90,7 +90,7 @@ cd /c/Users/Dima/Documents/GitHub/investments-calculator && bash .claude/hooks/t
 
 ## Last Audit
 
-**Date:** 2026-03-15 | **Tests:** 86/86 PASS
+**Date:** 2026-03-15 | **Tests:** 106/106 PASS
 
 **Found & fixed:**
 1. `.env` pattern `[a-z]+` missed uppercase variants (`.env.PRODUCTION`) → `[a-zA-Z0-9]+`
