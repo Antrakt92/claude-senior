@@ -196,11 +196,22 @@ Maintain `memory/improvement-log.md` per-project.
 
 These hooks fire in EVERY project via `~/.claude/settings.json`. Do NOT duplicate in project settings.
 
-- **block-dangerous-git.sh** (PreToolUse:Bash) — blocks force push, reset --hard, rm -rf, alembic downgrade, .env writes. Per-operation marker bypass.
+- **block-dangerous-git.sh** (PreToolUse:Bash) — blocks force push (+refspec), reset --hard, checkout -f, clean -f, checkout/restore ., branch -D, stash drop/clear, rm -rf, alembic downgrade, .env writes. Per-operation marker bypass.
 - **block-protected-files.sh** (PreToolUse:Edit|Write) — blocks .env* and lock files.
 - **auto-lint-python.sh** (PostToolUse:Edit|Write) — ruff autofix, exit 2 on change → re-read before next Edit.
 
 Projects can add their own hooks in `.claude/settings.json` — both global and project hooks fire. Avoid registering the same hook in both (double-fire).
+
+### Config repo: github.com/Antrakt92/claude-code-config
+
+All global config is backed up and versioned in this repo. Files in `~/.claude/` are **symlinks** to `~/Documents/GitHub/claude-code-config/global/` — editing one edits both.
+
+After changing global config (CLAUDE.md, settings.json, hooks):
+```bash
+cd ~/Documents/GitHub/claude-code-config && git add -A && git commit -m "update" && git push
+```
+
+Repo also contains project hook templates (`projects/`) and memory backups (`memory/`). On new machine: `git clone` + `bash install.sh`.
 
 ---
 
