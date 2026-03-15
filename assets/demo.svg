@@ -15,124 +15,129 @@
 
   <!-- Top badge -->
   <rect x="310" y="14" width="220" height="28" rx="14" fill="#252540" stroke="#454570" stroke-width="1"/>
-  <text x="420" y="33" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" fill="#6c7086" font-weight="500">claude-senior v1.0</text>
+  <text x="420" y="33" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" fill="#6c7086" font-weight="500">claude-senior</text>
+
+  <!--
+    24s cycle: scene 1 = 0-11.5s (48%), scene 2 = 12-23.5s (48%), transitions = 0.5s each
+    Cards appear at 5% intervals within each scene, then hold for ~5s of reading time
+  -->
 
   <!-- ═══════ SCENE 1: WITHOUT ═══════ -->
   <g opacity="0">
-    <animate attributeName="opacity" values="0;0;1;1;0;0;0" keyTimes="0;0.03;0.06;0.46;0.49;0.5;1" dur="14s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0;0;1;1;0;0;0" keyTimes="0;0.02;0.04;0.46;0.48;0.5;1" dur="24s" repeatCount="indefinite"/>
 
     <text x="420" y="78" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="22" fill="#f38ba8" font-weight="700">Without claude-senior</text>
     <text x="420" y="102" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14" fill="#6c7086">Claude Code ships broken code and calls it "done"</text>
+  </g>
 
-    <!-- Card 1 -->
-    <g opacity="0">
-      <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.08;0.12;0.46;0.49;1" dur="14s" repeatCount="indefinite"/>
-      <rect x="40" y="124" width="360" height="88" rx="10" fill="url(#card)"/>
-      <rect x="40" y="124" width="4" height="88" rx="2" fill="#f38ba8"/>
-      <text x="62" y="153" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="20" fill="#f38ba8">✗</text>
-      <text x="88" y="152" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14" fill="#cdd6f4" font-weight="600">Commits console.log &amp; any types</text>
-      <text x="88" y="174" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#585b70">console.log("debug:", data)</text>
-      <text x="88" y="194" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#585b70">function process(x: any): any { }</text>
-    </g>
+  <!-- Card 1: console.log & any -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.06;0.08;0.46;0.48;1" dur="24s" repeatCount="indefinite"/>
+    <rect x="40" y="124" width="360" height="88" rx="10" fill="url(#card)"/>
+    <rect x="40" y="124" width="4" height="88" rx="2" fill="#f38ba8"/>
+    <text x="62" y="153" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="20" fill="#f38ba8">✗</text>
+    <text x="88" y="152" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14" fill="#cdd6f4" font-weight="600">Commits console.log &amp; any types</text>
+    <text x="88" y="174" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#585b70">console.log("debug:", data)</text>
+    <text x="88" y="194" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#585b70">function process(x: any): any { }</text>
+  </g>
 
-    <!-- Card 2 -->
-    <g opacity="0">
-      <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.15;0.19;0.46;0.49;1" dur="14s" repeatCount="indefinite"/>
-      <rect x="440" y="124" width="360" height="88" rx="10" fill="url(#card)"/>
-      <rect x="440" y="124" width="4" height="88" rx="2" fill="#f38ba8"/>
-      <text x="462" y="153" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="20" fill="#f38ba8">✗</text>
-      <text x="488" y="152" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14" fill="#cdd6f4" font-weight="600">Changes function, forgets callers</text>
-      <text x="488" y="174" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#585b70">Changed calculate_tax() signature</text>
-      <text x="488" y="194" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#585b70">4 files still call the old version</text>
-    </g>
+  <!-- Card 2: forgets callers -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.11;0.13;0.46;0.48;1" dur="24s" repeatCount="indefinite"/>
+    <rect x="440" y="124" width="360" height="88" rx="10" fill="url(#card)"/>
+    <rect x="440" y="124" width="4" height="88" rx="2" fill="#f38ba8"/>
+    <text x="462" y="153" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="20" fill="#f38ba8">✗</text>
+    <text x="488" y="152" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14" fill="#cdd6f4" font-weight="600">Changes function, forgets callers</text>
+    <text x="488" y="174" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#585b70">Changed calculate_tax() signature</text>
+    <text x="488" y="194" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#585b70">4 files still call the old version</text>
+  </g>
 
-    <!-- Card 3 -->
-    <g opacity="0">
-      <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.22;0.26;0.46;0.49;1" dur="14s" repeatCount="indefinite"/>
-      <rect x="40" y="232" width="360" height="88" rx="10" fill="url(#card)"/>
-      <rect x="40" y="232" width="4" height="88" rx="2" fill="#f38ba8"/>
-      <text x="62" y="261" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="20" fill="#f38ba8">✗</text>
-      <text x="88" y="260" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14" fill="#cdd6f4" font-weight="600">Says "done" without running tests</text>
-      <text x="88" y="282" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#585b70">"I've fixed the bug" → tests are broken</text>
-      <text x="88" y="302" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#585b70">"Should work" = hasn't verified</text>
-    </g>
+  <!-- Card 3: no tests -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.16;0.18;0.46;0.48;1" dur="24s" repeatCount="indefinite"/>
+    <rect x="40" y="232" width="360" height="88" rx="10" fill="url(#card)"/>
+    <rect x="40" y="232" width="4" height="88" rx="2" fill="#f38ba8"/>
+    <text x="62" y="261" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="20" fill="#f38ba8">✗</text>
+    <text x="88" y="260" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14" fill="#cdd6f4" font-weight="600">Says "done" without running tests</text>
+    <text x="88" y="282" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#585b70">"I've fixed the bug" → tests are broken</text>
+    <text x="88" y="302" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#585b70">"Should work" = hasn't verified</text>
+  </g>
 
-    <!-- Card 4 -->
-    <g opacity="0">
-      <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.29;0.33;0.46;0.49;1" dur="14s" repeatCount="indefinite"/>
-      <rect x="440" y="232" width="360" height="88" rx="10" fill="url(#card)"/>
-      <rect x="440" y="232" width="4" height="88" rx="2" fill="#f38ba8"/>
-      <text x="462" y="261" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="20" fill="#f38ba8">✗</text>
-      <text x="488" y="260" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14" fill="#cdd6f4" font-weight="600">Runs git push --force, rm -rf</text>
-      <text x="488" y="282" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#585b70">Destroys remote history</text>
-      <text x="488" y="302" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#585b70">Deletes source directories</text>
-    </g>
+  <!-- Card 4: destructive commands -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.21;0.23;0.46;0.48;1" dur="24s" repeatCount="indefinite"/>
+    <rect x="440" y="232" width="360" height="88" rx="10" fill="url(#card)"/>
+    <rect x="440" y="232" width="4" height="88" rx="2" fill="#f38ba8"/>
+    <text x="462" y="261" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="20" fill="#f38ba8">✗</text>
+    <text x="488" y="260" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14" fill="#cdd6f4" font-weight="600">Runs git push --force, rm -rf</text>
+    <text x="488" y="282" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#585b70">Destroys remote history</text>
+    <text x="488" y="302" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#585b70">Deletes source directories</text>
+  </g>
 
-    <!-- Tagline scene 1 -->
-    <g opacity="0">
-      <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.35;0.38;0.46;0.49;1" dur="14s" repeatCount="indefinite"/>
-      <rect x="200" y="348" width="440" height="42" rx="21" fill="none" stroke="#f38ba8" stroke-width="1.5" stroke-opacity="0.5"/>
-      <text x="420" y="375" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="15" fill="#f38ba8" font-weight="600">You won't catch it — you never read the code</text>
-    </g>
+  <!-- Tagline scene 1 -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.26;0.28;0.46;0.48;1" dur="24s" repeatCount="indefinite"/>
+    <rect x="200" y="348" width="440" height="42" rx="21" fill="none" stroke="#f38ba8" stroke-width="1.5" stroke-opacity="0.5"/>
+    <text x="420" y="375" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="15" fill="#f38ba8" font-weight="600">You won't catch it — you never read the code</text>
   </g>
 
   <!-- ═══════ SCENE 2: WITH ═══════ -->
   <g opacity="0">
-    <animate attributeName="opacity" values="0;0;0;0;1;1;0" keyTimes="0;0.49;0.5;0.52;0.55;0.95;1" dur="14s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0;0;0;0;1;1;0" keyTimes="0;0.48;0.49;0.51;0.53;0.96;1" dur="24s" repeatCount="indefinite"/>
 
     <text x="420" y="78" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="22" fill="#a6e3a1" font-weight="700">With claude-senior</text>
     <text x="420" y="102" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14" fill="#6c7086">7 hooks + 10 behavioral rules + persistent memory</text>
+  </g>
 
-    <!-- Card 5 -->
-    <g opacity="0">
-      <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.57;0.61;0.95;1" dur="14s" repeatCount="indefinite"/>
-      <rect x="40" y="124" width="360" height="88" rx="10" fill="url(#card)"/>
-      <rect x="40" y="124" width="4" height="88" rx="2" fill="#a6e3a1"/>
-      <text x="62" y="153" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="20" fill="#a6e3a1">✓</text>
-      <text x="88" y="152" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14" fill="#cdd6f4" font-weight="600">Blocks bad code before commit</text>
-      <text x="88" y="174" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#a6e3a1">console.log → BLOCKED</text>
-      <text x="88" y="194" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#a6e3a1">any types → BLOCKED · catch {} → BLOCKED</text>
-    </g>
+  <!-- Card 5: blocks bad code -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.55;0.57;0.96;1" dur="24s" repeatCount="indefinite"/>
+    <rect x="40" y="124" width="360" height="88" rx="10" fill="url(#card)"/>
+    <rect x="40" y="124" width="4" height="88" rx="2" fill="#a6e3a1"/>
+    <text x="62" y="153" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="20" fill="#a6e3a1">✓</text>
+    <text x="88" y="152" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14" fill="#cdd6f4" font-weight="600">Blocks bad code before commit</text>
+    <text x="88" y="174" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#a6e3a1">console.log → BLOCKED</text>
+    <text x="88" y="194" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#a6e3a1">any types → BLOCKED · catch {} → BLOCKED</text>
+  </g>
 
-    <!-- Card 6 -->
-    <g opacity="0">
-      <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.64;0.68;0.95;1" dur="14s" repeatCount="indefinite"/>
-      <rect x="440" y="124" width="360" height="88" rx="10" fill="url(#card)"/>
-      <rect x="440" y="124" width="4" height="88" rx="2" fill="#a6e3a1"/>
-      <text x="462" y="153" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="20" fill="#a6e3a1">✓</text>
-      <text x="488" y="152" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14" fill="#cdd6f4" font-weight="600">Warns about affected callers</text>
-      <text x="488" y="174" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#a6e3a1">RIPPLE CHECK: calculate_tax used in</text>
-      <text x="488" y="194" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#a6e3a1">→ api.py:42  service.py:18  views.py:7</text>
-    </g>
+  <!-- Card 6: warns callers -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.60;0.62;0.96;1" dur="24s" repeatCount="indefinite"/>
+    <rect x="440" y="124" width="360" height="88" rx="10" fill="url(#card)"/>
+    <rect x="440" y="124" width="4" height="88" rx="2" fill="#a6e3a1"/>
+    <text x="462" y="153" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="20" fill="#a6e3a1">✓</text>
+    <text x="488" y="152" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14" fill="#cdd6f4" font-weight="600">Warns about affected callers</text>
+    <text x="488" y="174" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#a6e3a1">RIPPLE CHECK: calculate_tax used in</text>
+    <text x="488" y="194" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#a6e3a1">→ api.py:42  service.py:18  views.py:7</text>
+  </g>
 
-    <!-- Card 7 -->
-    <g opacity="0">
-      <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.71;0.75;0.95;1" dur="14s" repeatCount="indefinite"/>
-      <rect x="40" y="232" width="360" height="88" rx="10" fill="url(#card)"/>
-      <rect x="40" y="232" width="4" height="88" rx="2" fill="#a6e3a1"/>
-      <text x="62" y="261" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="20" fill="#a6e3a1">✓</text>
-      <text x="88" y="260" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14" fill="#cdd6f4" font-weight="600">Runs all checks automatically</text>
-      <text x="88" y="282" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#a6e3a1">ruff ✓  pytest ✓  tsc ✓  eslint ✓</text>
-      <text x="88" y="302" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#a6e3a1">No bypass. Fix the code, retry.</text>
-    </g>
+  <!-- Card 7: runs checks -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.65;0.67;0.96;1" dur="24s" repeatCount="indefinite"/>
+    <rect x="40" y="232" width="360" height="88" rx="10" fill="url(#card)"/>
+    <rect x="40" y="232" width="4" height="88" rx="2" fill="#a6e3a1"/>
+    <text x="62" y="261" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="20" fill="#a6e3a1">✓</text>
+    <text x="88" y="260" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14" fill="#cdd6f4" font-weight="600">Runs all checks automatically</text>
+    <text x="88" y="282" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#a6e3a1">ruff ✓  pytest ✓  tsc ✓  eslint ✓</text>
+    <text x="88" y="302" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#a6e3a1">No bypass. Fix the code, retry.</text>
+  </g>
 
-    <!-- Card 8 -->
-    <g opacity="0">
-      <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.78;0.82;0.95;1" dur="14s" repeatCount="indefinite"/>
-      <rect x="440" y="232" width="360" height="88" rx="10" fill="url(#card)"/>
-      <rect x="440" y="232" width="4" height="88" rx="2" fill="#a6e3a1"/>
-      <text x="462" y="261" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="20" fill="#a6e3a1">✓</text>
-      <text x="488" y="260" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14" fill="#cdd6f4" font-weight="600">Blocks destructive commands</text>
-      <text x="488" y="282" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#a6e3a1">git push --force → BLOCKED</text>
-      <text x="488" y="302" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#a6e3a1">rm -rf src/ → BLOCKED · .env → BLOCKED</text>
-    </g>
+  <!-- Card 8: blocks destructive -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.70;0.72;0.96;1" dur="24s" repeatCount="indefinite"/>
+    <rect x="440" y="232" width="360" height="88" rx="10" fill="url(#card)"/>
+    <rect x="440" y="232" width="4" height="88" rx="2" fill="#a6e3a1"/>
+    <text x="462" y="261" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="20" fill="#a6e3a1">✓</text>
+    <text x="488" y="260" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14" fill="#cdd6f4" font-weight="600">Blocks destructive commands</text>
+    <text x="488" y="282" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#a6e3a1">git push --force → BLOCKED</text>
+    <text x="488" y="302" font-family="SF Mono,Cascadia Code,Consolas,monospace" font-size="12" fill="#a6e3a1">rm -rf src/ → BLOCKED · .env → BLOCKED</text>
+  </g>
 
-    <!-- Tagline scene 2 -->
-    <g opacity="0">
-      <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.83;0.86;0.95;1" dur="14s" repeatCount="indefinite"/>
-      <rect x="175" y="348" width="490" height="42" rx="21" fill="none" stroke="#a6e3a1" stroke-width="1.5" stroke-opacity="0.5"/>
-      <text x="420" y="375" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="15" fill="#a6e3a1" font-weight="600">The AI catches its own mistakes before you see them</text>
-    </g>
+  <!-- Tagline scene 2 -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.75;0.77;0.96;1" dur="24s" repeatCount="indefinite"/>
+    <rect x="175" y="348" width="490" height="42" rx="21" fill="none" stroke="#a6e3a1" stroke-width="1.5" stroke-opacity="0.5"/>
+    <text x="420" y="375" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="15" fill="#a6e3a1" font-weight="600">The AI catches its own mistakes before you see them</text>
   </g>
 
   <!-- ═══════ ALWAYS VISIBLE: Stats + Install ═══════ -->
