@@ -120,7 +120,7 @@ while IFS= read -r NAME; do
     --include="*.py" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" \
     --include="*.go" --include="*.rs" \
     2>/dev/null \
-    | grep -v "$FILE_BASENAME" \
+    | grep -Fv "$FILE_BASENAME" \
     | head -5)
 
   if [ -n "$MATCHES" ]; then

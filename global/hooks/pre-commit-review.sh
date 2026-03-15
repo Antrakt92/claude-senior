@@ -130,6 +130,9 @@ FILE_COUNT=$(echo "$STAGED" | wc -l | tr -d ' ')
 # === Phase 1: Auto-checks (no marker bypass) ===
 # WHY no marker bypass: linter/test errors mean code is objectively broken.
 AUTO_ERRORS=""
+# WHY track PASSED separately: Phase 2 shows which checks ran. Without tracking,
+# we'd show "ruff ✓" even if ruff wasn't installed and was skipped.
+PASSED=""
 
 # --- Python ---
 if $HAS_PYTHON && [ -n "$PYTHON_DIR" ]; then
@@ -141,6 +144,8 @@ if $HAS_PYTHON && [ -n "$PYTHON_DIR" ]; then
       AUTO_ERRORS="${AUTO_ERRORS}\nRUFF TIMEOUT: ruff check took >30s"
     elif [ $RUFF_EXIT -ne 0 ]; then
       AUTO_ERRORS="${AUTO_ERRORS}\nRUFF FAILED:\n$(echo "$RUFF_OUT" | head -10)"
+    else
+      PASSED="${PASSED}ruff ✓ "
     fi
   fi
 
@@ -161,6 +166,8 @@ if $HAS_PYTHON && [ -n "$PYTHON_DIR" ]; then
     elif [ $PYTEST_EXIT -ne 0 ] && [ $PYTEST_EXIT -ne 5 ]; then
       # WHY exit 5 = no tests collected — not an error, just no tests in project
       AUTO_ERRORS="${AUTO_ERRORS}\nPYTEST FAILED:\n$(echo "$PYTEST_OUT" | tail -15)"
+    else
+      PASSED="${PASSED}pytest ✓ "
     fi
   fi
 fi
@@ -174,6 +181,8 @@ if $HAS_TS && [ -n "$TS_DIR" ]; then
       AUTO_ERRORS="${AUTO_ERRORS}\nTSC TIMEOUT: tsc --noEmit took >120s"
     elif [ $TSC_EXIT -ne 0 ]; then
       AUTO_ERRORS="${AUTO_ERRORS}\nTSC FAILED:\n$(echo "$TSC_OUT" | head -10)"
+    else
+      PASSED="${PASSED}tsc ✓ "
     fi
   fi
 
@@ -198,6 +207,8 @@ if $HAS_TS && [ -n "$TS_DIR" ]; then
       AUTO_ERRORS="${AUTO_ERRORS}\nESLINT TIMEOUT: eslint took >60s"
     elif [ $LINT_EXIT -ne 0 ]; then
       AUTO_ERRORS="${AUTO_ERRORS}\nESLINT FAILED:\n$(echo "$LINT_OUT" | head -10)"
+    else
+      PASSED="${PASSED}eslint ✓ "
     fi
   fi
 fi
@@ -211,6 +222,8 @@ if $HAS_GO; then
       AUTO_ERRORS="${AUTO_ERRORS}\nGO VET TIMEOUT: go vet took >30s"
     elif [ $GOVET_EXIT -ne 0 ]; then
       AUTO_ERRORS="${AUTO_ERRORS}\nGO VET FAILED:\n$(echo "$GOVET_OUT" | head -10)"
+    else
+      PASSED="${PASSED}go vet ✓ "
     fi
 
     GOTEST_OUT=$(timeout 120 go test ./... 2>&1)
@@ -219,6 +232,8 @@ if $HAS_GO; then
       AUTO_ERRORS="${AUTO_ERRORS}\nGO TEST TIMEOUT: go test took >120s"
     elif [ $GOTEST_EXIT -ne 0 ]; then
       AUTO_ERRORS="${AUTO_ERRORS}\nGO TEST FAILED:\n$(echo "$GOTEST_OUT" | tail -15)"
+    else
+      PASSED="${PASSED}go test ✓ "
     fi
   fi
 fi
@@ -232,6 +247,8 @@ if $HAS_RUST; then
       AUTO_ERRORS="${AUTO_ERRORS}\nCARGO CHECK TIMEOUT: cargo check took >60s"
     elif [ $CARGO_CHECK_EXIT -ne 0 ]; then
       AUTO_ERRORS="${AUTO_ERRORS}\nCARGO CHECK FAILED:\n$(echo "$CARGO_CHECK_OUT" | head -10)"
+    else
+      PASSED="${PASSED}cargo check ✓ "
     fi
 
     CARGO_TEST_OUT=$(timeout 120 cargo test 2>&1)
@@ -240,6 +257,8 @@ if $HAS_RUST; then
       AUTO_ERRORS="${AUTO_ERRORS}\nCARGO TEST TIMEOUT: cargo test took >120s"
     elif [ $CARGO_TEST_EXIT -ne 0 ]; then
       AUTO_ERRORS="${AUTO_ERRORS}\nCARGO TEST FAILED:\n$(echo "$CARGO_TEST_OUT" | tail -15)"
+    else
+      PASSED="${PASSED}cargo test ✓ "
     fi
   fi
 fi
@@ -252,6 +271,8 @@ if $HAS_NODE; then
     AUTO_ERRORS="${AUTO_ERRORS}\nNPM TEST TIMEOUT: npm test took >120s"
   elif [ $NPM_TEST_EXIT -ne 0 ]; then
     AUTO_ERRORS="${AUTO_ERRORS}\nNPM TEST FAILED:\n$(echo "$NPM_TEST_OUT" | tail -15)"
+  else
+    PASSED="${PASSED}npm test ✓ "
   fi
 fi
 
@@ -272,13 +293,9 @@ fi
 {
   echo "COMMIT BLOCKED — Self-review required ($STAT)"
 
-  # Show which auto-checks passed
-  PASSED=""
-  $HAS_PYTHON && [ -n "$PYTHON_DIR" ] && PASSED="${PASSED}ruff ✓ pytest ✓ "
-  $HAS_TS && [ -n "$TS_DIR" ] && PASSED="${PASSED}tsc ✓ eslint ✓ "
-  $HAS_GO && PASSED="${PASSED}go vet ✓ go test ✓ "
-  $HAS_RUST && PASSED="${PASSED}cargo check ✓ cargo test ✓ "
-  $HAS_NODE && PASSED="${PASSED}npm test ✓ "
+  # WHY use PASSED from Phase 1: only shows checks that actually ran and succeeded.
+  # Previously this section rebuilt the list from flags, showing "tsc ✓" even when
+  # tsc was skipped (no tsconfig) or "ruff ✓" when ruff wasn't installed.
   [ -n "$PASSED" ] && echo "Auto-checks passed: $PASSED"
   echo ""
 
