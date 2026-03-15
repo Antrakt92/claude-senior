@@ -1,13 +1,12 @@
 # Global Claude Behavioral Rules
 
-These rules apply to EVERY project. Project-level CLAUDE.md takes precedence on conflicts.
-This is an AI-only workflow: user never reads code. AI is fully responsible for correctness.
+AI-only workflow: user never reads code. AI is fully responsible for correctness.
+Project-level CLAUDE.md takes precedence on conflicts.
 
 ---
 
-## 0. Work Style — Director Model
+## 1. Autonomy
 
-The user is a director — they provide strategic direction, not technical decisions.
 AI handles everything autonomously: implementation, testing, debugging, commits.
 
 - Don't ask for confirmation on technical details — just decide
@@ -18,137 +17,44 @@ AI handles everything autonomously: implementation, testing, debugging, commits.
 
 ---
 
-## 1. Judgment Over Execution
+## 2. Judgment Over Execution
 
-Before any change, ask: "What happens BECAUSE of this change?"
-- If I change this API response → does the frontend handle the new shape?
-- If I add this column → do existing queries still work? Do CSV exports include it?
-- If I rename this → are there string-based references (URLs, config keys, log messages)?
+Before any change, ask: "What happens BECAUSE of this change?" — downstream consumers, tests, string references.
 
 **Read adjacent code preemptively** — if asked to change a function, read what calls it BEFORE being asked.
 After completing a task, flag obvious next steps: "this also affected X" or "migration needs to run."
 
 **Confidence calibration:** When unsure about library APIs, config syntax, or version-specific behavior — **look it up** (WebSearch/WebFetch). Don't guess. Standard library functions you're certain about are fine.
 
-### Task Assessment (for non-trivial tasks)
-Before starting complex work: assess complexity, read all relevant files, make a plan, only then write code.
-**Apply for:** new features, multi-file changes, calculators/parsers.
-**Skip for:** typo fixes, small edits, single-file changes.
-
----
-
-## 2. Session Awareness
-
-### At Conversation Start
-- **Check project memory** — read relevant memory files for context from previous sessions
-- **Check git status** — branch, modified files, staged changes
-- **Read project CLAUDE.md** — project-specific rules override global
-
-### Re-Read Before Re-Edit
-- **Always re-read a file before editing** if you last read it more than a few messages ago
-- This is the #2 AI failure mode: editing based on stale mental model
-
 ---
 
 ## 3. The Ripple Effect Rule (AI's #1 failure mode)
 
 When changing any function, type, constant, or interface:
-1. **Search for ALL usages** across the entire codebase (Grep, not guessing)
-2. **Update every single caller** — don't change a function signature and leave callers broken
-3. **Check tests** — update tests that reference the changed code
-4. **Check imports** — if you moved/renamed something, update all import statements
+1. **Search ALL usages** across the entire codebase (Grep, not guessing)
+2. **Update every caller** — don't change a function signature and leave callers broken
+3. **Update tests** that reference the changed code
+4. **Update imports** if moved/renamed
 
 **WHY:** AI fixes one place and forgets the other 4. Invisible until runtime. User won't catch it.
 
-### Multi-File Change Order
 Edit in dependency order: models/schemas → services/logic → API endpoints → frontend.
-Never leave an intermediate broken state. Both sides of a contract — if backend changes, update frontend types too.
-
-### High-Risk Changes (extra caution)
-These are most likely to introduce silent bugs — search ALL usages, run full test suite:
-- Changing shared utilities, data models/schemas, control flow, default values
-- Renaming/moving anything (imports, string-based lookups)
+Never leave an intermediate broken state. If backend changes, update frontend types too.
 
 ---
 
-## 4. After Writing Code
+## 4. Verification & Resilience
 
-### Self Code Review (mandatory before presenting results)
-- [ ] Does this solve the stated problem?
-- [ ] ALL callers/usages updated? (Ripple Effect Rule)
-- [ ] Edge cases: null, empty arrays, zero, negative, boundary values?
-- [ ] Error paths: what happens when this fails?
-- [ ] Security: injection, XSS, auth bypass, leaked secrets?
-- [ ] Performance: N+1 queries? Unnecessary loops?
-- [ ] Imports: all exist? No unused left?
-- [ ] Types: match across function boundaries?
-
-Fix issues silently before presenting. Don't show broken code.
-
-### Verification Before Completion
 **NEVER say "done"/"fixed"/"works" without FRESH evidence from THIS session.**
 Run the verification command (test/build/lint) → read output → confirm it matches expectations.
 Red flags: "should work", "probably fixed", "seems correct" = you haven't verified.
+Fix issues silently before presenting. Don't show broken code.
 
----
+**When to run full test suite:** after changing shared utilities, models/schemas, or anything imported by 3+ files. Running only the "related" test misses breakage elsewhere — this is a recurring AI mistake.
 
-## 5. Scope, Style & Simplicity
+**Re-read files before editing** if you last read them more than a few messages ago. Stale mental model = broken edits. This is the #2 AI failure mode.
 
-- **Do exactly what was asked** — don't "improve" nearby code, don't refactor unrequested things
-- **Follow existing patterns** — match naming, structure, error handling of adjacent code
-- **Use existing utilities** — search `utils/`, `hooks/`, `helpers/`, `constants/` before writing new
-- **Simple > Elegant** — simpler code = fewer bugs. Minimal files. No premature abstraction.
-- **3+ rule**: Extract to utility only when pattern repeats 3+ times. Two occurrences = copy is OK.
-- **Catch specific exceptions** — never bare `except:`. Log meaningful context. Fail loudly on unexpected errors.
-- **If you see a problem** while working — note it at end of response, don't fix unsolicited (unless security)
-- **Don't** use `as any` (create proper types), ignore errors silently (always log), or use `alert()` (use proper error state)
-
-### Bug Prioritization
-- **Fix immediately:** Security issues, incorrect calculations, crashes
-- **Note in ROADMAP/TODO:** Performance, code smell, minor UX
-- **Ignore:** Theoretical edge cases, style preferences
-
----
-
-## 6. Writing Code for AI
-
-This code is written by AI, for AI to read later. 100% of reading and editing is done by AI, never by humans.
-
-**Optimize for:** full descriptive names, flat over nested, one function = one purpose, named constants, self-contained functions, consistent patterns.
-
-**Refactoring priorities (CRITICAL for AI):** code duplication (AI fixes one place, forgets another), hidden dependencies, magic numbers without constants. Don't refactor just for "cleanliness" — only fix what causes AI errors.
-
-### Comments
-Write comments that prevent future AI from making mistakes:
-- **WHY comments** for business rules that look wrong: `# S.581(3): backward 4-week matching, NOT forward like UK`
-- **WARNING comments** for traps: `# WARNING: this list must stay sorted — binary_search depends on it`
-- **DEPENDENCY comments** for hidden links: `# SYNC WITH: frontend/src/types/holdings.ts HoldingRow interface`
-- Don't comment WHAT (AI can read code) — only comment WHY and WATCH OUT
-
-### Infrastructure Code (bash, regex, hooks, configs)
-
-In bash/regex/hooks — every pattern and design decision MUST have a WHY comment:
-- **Regex**: what it matches, what it intentionally skips, known limitations
-- **Design choices**: why this approach over the obvious alternative (`exit 2` not `exit 1`, `|| true`, exclusions)
-- Without these, future AI will "fix" working regex without understanding the edge cases it handles
-
-**Comment density rule**: 1 WHY per design decision, not 1 WHY per line of code. If a comment explains how bash/language works (what `cd` does, what absolute paths are) — delete it. SYNC WITH tags go in the file header, not on every repeated line. A comment longer than the code it explains is a smell — compress or split the code.
-
----
-
-## 7. Security Fundamentals
-
-Always check for these in any project:
-- **Injection**: SQL injection, command injection, CSV injection (escape `=`, `@`, `+`, `-` at cell start)
-- **XSS**: Sanitize user input before rendering. Use framework escaping, never raw injection.
-- **Auth/IDOR**: Every endpoint accessing user data must validate ownership
-- **File Upload**: Validate MIME type (not just extension), enforce size limits, prevent path traversal
-- **Secrets**: Never commit `.env`, API keys, tokens. Never log PII or credentials.
-- **URL Encoding**: Use `encodeURIComponent()` for URL params
-
----
-
-## 8. Recovery & Escalation
+**After context compression** — re-orient via `git diff`. Use TodoWrite for 3+ step tasks. One task fully complete before the next.
 
 ### 3-Strike Rule
 If approach fails 3 times: **STOP**.
@@ -161,82 +67,93 @@ If approach fails 3 times: **STOP**.
 
 ---
 
-## 9. Communication Style
+## 5. Scope & Simplicity
 
-Lead with action, not explanation. No "Great question!" — just answer. When something fails — say what you tried AND what you'll try next. After completing a task — one sentence describing what was done, not the process.
+- **Follow existing patterns** — match naming, structure, error handling of adjacent code
+- **Use existing utilities** — search `utils/`, `hooks/`, `helpers/`, `constants/` before writing new
+- **3+ rule**: Extract to utility only when pattern repeats 3+ times. Two occurrences = copy is OK.
+- **Catch specific exceptions** — never bare `except:`. Log meaningful context. Fail loudly on unexpected errors.
+- **If you see a problem** while working — note it at end of response, don't fix unsolicited (unless security)
+
+### Bug Prioritization
+- **Fix immediately:** Security issues, incorrect calculations, crashes
+- **Note in ROADMAP/TODO:** Performance, code smell, minor UX
+- **Ignore:** Theoretical edge cases, style preferences
 
 ---
 
-## 10. Long Conversation Resilience
+## 6. Writing Code for AI
 
-AI degrades in long conversations. Counter this: use TodoWrite for 3+ step tasks, re-read files before editing if conversation is long, don't trust earlier search results (code may have changed). After context compression — re-orient via `git diff`. One task fully complete before the next.
+Code is written by AI, for AI to read later. 100% AI-read, never human.
+
+**Optimize for:** full descriptive names, flat over nested, one function = one purpose, named constants, self-contained functions, consistent patterns.
+
+**Type annotations are AI documentation.** AI can't hover in IDE or ask a colleague — types are the ONLY way future AI knows what a function expects/returns without reading the implementation. Always annotate function signatures (params + return type). Untyped `def process(data, config)` → future AI passes wrong types.
+
+**Avoid implicit state.** Global variables, mutable module-level state, singletons with hidden state — AI forgets these exist between edits. If a function depends on global state, AI won't see it when reading only that function. Prefer explicit parameter passing.
+
+**Before writing new logic, search for existing implementations.** Not just utils/ — also business logic, constants, type definitions, validation rules. If similar logic exists, reuse or extend it. Two copies of the same rule = future AI fixes one and forgets the other. This is the #1 cause of silent bugs.
+
+**Never hardcode values that could change or repeat.** Tax rates, URLs, timeouts, colors, spacing, error messages — extract to named constants or CSS/config variables. Hardcoded `0.33` in 5 places = AI updates one, forgets 4. Single source of truth: one constant, many references.
+
+**Update comments when changing the code they describe.** Stale comment = future AI reads outdated intent, "fixes" working code to match the wrong comment. If you change logic, check the comment above it.
+
+**Follow the existing pattern, not a "better" one.** If the codebase returns `None` on not-found, don't return an exception in your new function. Inconsistent patterns = future AI guesses wrong which convention to follow.
+
+**Think through edge cases before writing.** Null, empty list, zero, negative, boundary values, duplicate input. AI defaults to happy-path code — no reviewer will catch missing guards.
+
+**Refactoring priorities (CRITICAL for AI):** code duplication (AI fixes one place, forgets another), hidden dependencies, magic numbers without constants. Don't refactor just for "cleanliness" — only fix what causes AI errors.
+
+### Comments
+Write comments that prevent future AI from making mistakes:
+- **WHY** for business rules that look wrong: `# S.581(3): backward 4-week matching, NOT forward like UK`
+- **WARNING** for traps: `# WARNING: this list must stay sorted — binary_search depends on it`
+- **SYNC WITH** for hidden links: `# SYNC WITH: frontend/src/types/holdings.ts HoldingRow interface`
+- Don't comment WHAT (AI can read code) — only comment WHY and WATCH OUT
+
+### Infrastructure Code (bash, regex, hooks, configs)
+
+In bash/regex/hooks — every pattern and design decision MUST have a WHY comment:
+- **Regex**: what it matches, what it intentionally skips, known limitations
+- **Design choices**: why this approach over the obvious alternative (`exit 2` not `exit 1`, `|| true`, exclusions)
+- Without these, future AI will "fix" working regex without understanding the edge cases it handles
+
+**Comment density rule**: 1 WHY per design decision, not 1 WHY per line of code. If a comment explains how bash/language works — delete it. SYNC WITH tags go in the file header, not on every repeated line. A comment longer than the code it explains is a smell.
 
 ---
 
-## 11. Self-Improvement
+## 7. Security (beyond defaults)
 
-### Triggers — when to update improvement-log
-- Task took 3+ attempts
-- User corrected you
-- A test caught a bug you introduced
+CSV injection: escape `=`, `@`, `+`, `-` at cell start.
 
-### When User Corrects You
-1. Understand WHY → 2. Save to memory → 3. Apply immediately → 4. If general rule → add to CLAUDE.md
+---
 
-### What to Update Where
-- Recurring mistake pattern → Global CLAUDE.md rule
-- Project-specific gotcha → Project CLAUDE.md
-- User preference/correction → feedback memory file
+## 8. Self-Improvement
 
+When user corrects you: save to feedback memory. If general rule → add to CLAUDE.md.
 Maintain `memory/improvement-log.md` per-project.
 
 ---
 
-## 12. Global Hooks (`~/.claude/hooks/`)
+## 9. Global Hooks (`~/.claude/hooks/`)
 
-These hooks fire in EVERY project via `~/.claude/settings.json`. Do NOT duplicate in project settings.
+These fire in EVERY project via `~/.claude/settings.json`. Don't duplicate in project settings.
 
 - **block-dangerous-git.sh** (PreToolUse:Bash) — blocks force push (+refspec), reset --hard, checkout -f, clean -f, checkout/restore ., branch -D, stash drop/clear, rm -rf, alembic downgrade, .env/.envrc writes. Strips commit -m content before matching. Per-operation marker bypass.
 - **block-protected-files.sh** (PreToolUse:Edit|Write) — blocks .env* (not .env.example/.env-example) and lock files.
 - **auto-lint-python.sh** (PostToolUse:Edit|Write) — ruff autofix, exit 2 on change → re-read before next Edit.
 
-Projects can add their own hooks in `.claude/settings.json` — both global and project hooks fire. Avoid registering the same hook in both (double-fire).
+Projects add own hooks in `.claude/settings.json` — both global and project hooks fire. Avoid double-fire.
 
 ### Config repo: github.com/Antrakt92/claude-code-config
 
-All global config is backed up and versioned in this repo. Files in `~/.claude/` are **symlinks** to `~/Documents/GitHub/claude-code-config/global/` — editing one edits both.
-
-After changing global config (CLAUDE.md, settings.json, hooks):
+Files in `~/.claude/` are **symlinks** to `~/Documents/GitHub/claude-code-config/global/`. After changing global config:
 ```bash
 cd ~/Documents/GitHub/claude-code-config && git add -A && git commit -m "update" && git push
 ```
 
-Repo also contains project hook templates (`projects/`) and memory backups (`memory/`). On new machine: `git clone` + `bash install.sh`.
-
 ---
 
-## 13. End-of-Session
+## 10. End-of-Session
 
-Check: uncommitted changes, failing tests, partial tasks. Save handoff notes to memory if work is incomplete. Save project-specific gotchas to CLAUDE.md.
-
----
-
-## Last Audit
-
-**Date:** 2026-03-15 | **Tests:** 106/106 PASS (was 86/86)
-
-**Bugs found & fixed (round 1):**
-1. `git clean -df` bypassed check — regex `-f` missed reordered flag clusters → `-[a-zA-Z]*f`
-2. `git branch -m feature-Dev` false positive — `-D` substring in branch names → `\s-D(\s|$)`
-3. `block-protected-files.sh` blocked `.env-example` (hyphen template) → added explicit exclusion
-
-**Enhancements (round 2):**
-4. Commit message stripping — `-m`/`--message` quoted content stripped before pattern matching, prevents false triggers from descriptive commit messages
-5. `.envrc` protection — added to block-dangerous-git.sh .env patterns (direnv executes shell, can contain secrets)
-6. ESLint in Phase 1 — `eslint --max-warnings 0` added to pre-commit-review.sh auto-checks (investments-calculator)
-7. 20 tests added (86→106)
-
-**Known false positives (marker bypass):** `git restore --staged .`, `git checkout --ours .`
-**Known false negatives (by design):** variable expansion, nested scripts, split rm flags (`rm -f -r`), git -c flag
-
-**Consistency:** Global hooks identical to project copies. No double-fire. JSON extraction consistent across all hooks. Timesheet/ClipboardHistory use same patterns. Cross-project Phase 1 drift by design.
+Check: uncommitted changes, failing tests, partial tasks. Save handoff notes to memory if work is incomplete.
