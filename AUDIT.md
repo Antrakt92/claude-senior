@@ -128,24 +128,27 @@ cd /c/Users/Dima/Documents/GitHub/investments-calculator && bash .claude/hooks/t
 
 ## Last Audit
 
-**Date:** 2026-03-15 (2nd audit) | **Global tests:** 41/41 PASS | **Project tests (inv-calc):** 106/106 PASS
+**Date:** 2026-03-15 (3rd pass) | **Global tests:** 42/42 PASS | **Project tests (inv-calc):** 112/112 PASS
 
 **Architecture:**
 - 6 global hooks (block-dangerous-git, block-protected-files, pre-commit-review, auto-lint-python, auto-lint-typescript, ripple-check)
-- pre-commit-review (global) = universal stack auto-detection (Python/TS/Go/Rust/Node)
-- investments-calculator overrides: pre-commit-review.sh, auto-lint-typescript.sh (project-specific)
+- pre-commit-review: Phase 1 (linters+tests) + Phase 2 (diff analysis). Both fully automated, NO marker bypass.
+- Phase 2 checks: `any` types, empty catch/except, TODO/FIXME/HACK, console.log, commit size >500 lines, missing migrations, new files without tests
+- investments-calculator overrides: pre-commit-review.sh, auto-lint-typescript.sh
 - Timesheet overrides: pre-commit-review.sh, auto-lint-typescript.sh
 - ClipboardHistory overrides: pre-commit-review.sh only
 - Double-fire prevention via `[ -f ".claude/hooks/<name>.sh" ] && exit 0` in global hooks
 - Timesheet/ClipboardHistory .claude/ dirs are untracked (local only)
 
 **Found & fixed (this session):**
-1. inv-calc pre-commit-review.sh: Phase 2 showed empty "Auto-checks passed: " when only CSS files staged — now conditional
-2. inv-calc pre-commit-review.sh: double blank line before WARNING removed
-3. Timesheet/ClipboardHistory pre-commit-review.sh: stale §12→§9 SYNC WITH references
-4. Global test-hooks.sh: +6 new tests (35→41) — bypass marker mechanism, grep -Fv regex-special filenames, MAX_WARNINGS=5 limit
+1. **Phase 2 replaced**: old advisory checklist (AI rubber-stamped `touch marker`) → automated diff analysis (no bypass)
+2. **grep BRE bug**: `^\+\+\+` in BRE treated `\+` as quantifier, filtering ALL diff lines with `+` → fixed to `^+++`
+3. **CLAUDE.md §4 enhanced**: added Read-Before-Edit Rule, Change Size Rule, Uncertainty Disclosure Rule, Test Failure Recovery Protocol
+4. Phase 2 empty "Auto-checks passed:" display — fixed (2nd pass)
+5. Timesheet/ClipboardHistory §12→§9 references — fixed (2nd pass)
+6. +7 new global tests (35→42), +6 new project tests (106→112)
 
 **Previous audit fixes still valid:** grep -Fv in ripple-check, uppercase .env, checkout HEAD ., restore --source patterns
 
-**Known false positives (marker bypass):** `git restore --staged .`, `git checkout --ours .`, `git stash drop stash@{0}`, `git clean -fX`
+**Known false positives (block-dangerous-git bypass marker):** `git restore --staged .`, `git checkout --ours .`, `git stash drop stash@{0}`, `git clean -fX`
 **Known false negatives (by design):** variable expansion, nested scripts, split rm flags, git -C flag, `git push origin :main` (delete branch), uppercase `.ENV` on Windows
