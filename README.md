@@ -1,12 +1,22 @@
 # claude-senior
 
-> Claude Code says "done" without running tests. Commits `: any` types. Changes a function signature and leaves 4 callers broken. Leaves `console.log` in production code.
->
-> **claude-senior** makes it stop doing that.
+A hardening framework for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) that turns it from a confident junior into an autonomous senior developer.
+
+**The problem:** Claude Code says "done" without running tests. Commits `: any` types and `console.log`. Changes a function and leaves 4 callers broken. Runs `git push --force` and destroys remote history. You won't catch any of this — because you never read the code.
+
+**The solution:** 7 shell hooks that automatically block bad commits, catch destructive commands, and warn about forgotten callers. 10 behavioral rules in CLAUDE.md that shape how the AI thinks — before it makes mistakes, not after. A memory system that makes it learn from corrections across sessions.
+
+Three layers working together:
+
+- **Behavioral rules** (CLAUDE.md) — "re-read the file before editing", "search ALL callers before changing a function", "stop and rethink after 3 failed attempts"
+- **Automated enforcement** (hooks) — every commit must pass linters, tests, and diff analysis. No bypass. Destructive commands blocked before execution
+- **Persistent learning** (memory) — AI logs mistakes and applies corrections in future sessions
+
+Not a plugin. Not a skill. Plugins add new tools. **claude-senior** makes the AI better at using the tools it already has.
 
 <p align="center">
-  <a href="assets/demo.svg">
-    <img src="assets/demo.svg?v=4" alt="Without vs With claude-senior" width="780">
+  <a href="assets/hero.svg">
+    <img src="assets/hero.svg" alt="Without vs With claude-senior — side by side comparison" width="780">
   </a>
 </p>
 
@@ -18,50 +28,53 @@ cd claude-senior
 bash install.sh
 ```
 
-That's it. Next time Claude Code runs, it's a senior dev.
+That's it. Next time Claude Code runs, it's a senior dev. Works on Windows (Git Bash), macOS, and Linux.
 
-## What it catches
+## What it blocks
 
-Every commit is automatically blocked until:
+Every `git commit` is intercepted and checked. Both phases must pass — no marker bypass, no skip.
 
-| Check | What happens |
-|-------|-------------|
-| `console.log("debug")` | **Blocked.** Use `console.warn` or `console.error`. |
-| `const x: any = 1` | **Blocked.** Use a proper type. |
-| `catch (e) {}` | **Blocked.** Add error handling. |
-| `// TODO fix later` | **Blocked.** Fix it now or don't commit. |
-| 500+ lines in one commit | **Blocked.** Split into smaller commits. |
-| `entities.py` changed, no migration | **Blocked.** Create the migration. |
+**Phase 1 — Linters & tests** (auto-detected per stack):
+
+`ruff check` + `pytest` for Python. `tsc --noEmit` + `eslint` for TypeScript. `go vet` + `go test` for Go. `cargo check` + `cargo test` for Rust.
+
+**Phase 2 — Diff analysis** (greps staged diff for AI anti-patterns):
+
+| Pattern | Action |
+|---------|--------|
+| `console.log` in staged code | **Blocked.** Use `console.warn` or `console.error`. |
+| `: any`, `<any>`, `as any` | **Blocked.** Use a proper type. |
+| `catch (e) {}`, bare `except:` | **Blocked.** Add error handling. |
+| `TODO`, `FIXME`, `HACK` | **Blocked.** Finish it or don't commit. |
+| 500+ lines added | **Blocked.** Split into smaller commits. |
+| Model changed, no migration | **Blocked.** Create the migration. |
+
+**Safety net** (destructive commands blocked before execution):
+
+| Command | Action |
+|---------|--------|
 | `git push --force` | **Blocked.** Use `--force-with-lease`. |
-| `rm -rf src/` | **Blocked.** Are you sure? |
-| Write to `.env` | **Blocked.** Secrets stay out of AI. |
-| Changed a function used in 5 files | **Warned.** Did you update all callers? |
+| `git reset --hard` | **Blocked.** Stash first. |
+| `rm -rf src/` | **Blocked.** Build artifacts like `node_modules/` are whitelisted. |
+| `echo SECRET > .env` | **Blocked.** Secrets stay out of AI reach. |
 
-Plus: `ruff check` + `pytest` + `tsc --noEmit` + `eslint --max-warnings 0` on every commit. No bypass.
+**Ripple effect warning** (after every file edit):
+
+When you edit a file, the hook greps the codebase for every function/class/constant defined in that file and warns if they're used elsewhere. Non-blocking — it's a reminder to check callers.
 
 ## Why this exists
 
-Vanilla Claude Code is a strong junior developer. These are the failure modes that keep it there:
+Claude Code is a strong junior developer. These are the failure modes that keep it there — and what claude-senior does about each one:
 
-| Failure mode | What goes wrong |
-|-------------|-----------------|
-| **Ripple effect** (#1 AI failure) | Changes function signature, leaves 4 callers broken |
-| **Stale mental model** (#2 AI failure) | Edits file from memory instead of re-reading — breaks things |
-| **False confidence** | Says "fixed" without running tests — "should work" = hasn't verified |
-| **Code duplication** | Creates new helper instead of finding the existing one |
-| **Hardcoded values** | `0.33` in 5 places — updates one, forgets four |
-| **Happy-path only** | No null/empty/boundary guards — no reviewer will catch it |
-| **Loop-and-tweak** | Retries same failing approach 5 times instead of rethinking |
-
-**claude-senior** addresses all of these with three layers:
-
-| Layer | What it does |
-|-------|-------------|
-| **Behavioral rules** (CLAUDE.md) | Shapes how the AI thinks — "re-read the file before editing", "search ALL callers before changing a function", "stop after 3 failed attempts" |
-| **Automated enforcement** (7 hooks) | Catches violations automatically — blocks commits, warns about callers, auto-formats code |
-| **Persistent learning** (memory) | AI logs mistakes and learns from them across sessions |
-
-No existing Claude Code plugin does this. Plugins add new tools (browser, database). **claude-senior** makes the AI better at using the tools it already has.
+| AI failure mode | What goes wrong | How claude-senior fixes it |
+|----------------|-----------------|---------------------------|
+| **Ripple effect** (#1) | Changes function signature, leaves callers broken | `ripple-check.sh` warns about all usages after every edit |
+| **Stale mental model** (#2) | Edits file from memory, not from disk | CLAUDE.md Read-Before-Edit Rule: must re-read within 3 tool calls |
+| **False confidence** | "Fixed!" — tests are broken | `pre-commit-review.sh` runs full test suite, blocks on failure |
+| **Lazy types** | `any` everywhere, empty `catch {}` | Phase 2 diff analysis catches these in staged code |
+| **Debug artifacts** | `console.log`, `TODO` left in commits | Phase 2 blocks until removed |
+| **Destructive commands** | `git push --force`, `rm -rf` | `block-dangerous-git.sh` intercepts before execution |
+| **Loop-and-tweak** | Retries same failing approach 5 times | CLAUDE.md 3-Strike Rule: stop, re-read, try opposite approach |
 
 ## Architecture
 
