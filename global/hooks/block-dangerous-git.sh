@@ -83,7 +83,9 @@ if echo "$CMD" | grep -q "git reset --hard"; then
   block "BLOCKED: git reset --hard discards all uncommitted work. Stash first (git stash)."
 fi
 
-if echo "$CMD" | grep -qE "git clean.*-f"; then
+# WHY -[a-zA-Z]*f: catches any flag cluster containing f (e.g. -f, -df, -fd, -fnd).
+# Plain "-f" misses "-df" because 'd' sits between '-' and 'f'. Same approach as rm -r pattern.
+if echo "$CMD" | grep -qE "git clean.*-[a-zA-Z]*f"; then
   block "BLOCKED: git clean -f permanently deletes untracked files. Review with git clean -n first."
 fi
 
@@ -110,8 +112,10 @@ if echo "$CMD" | grep -qE "git restore\b.*\s\\.( |$)"; then
   block "BLOCKED: git restore . discards all unstaged changes. Stash first (git stash)."
 fi
 
-# Block force-deleting branches (allow -d safe delete, block -D force delete)
-if echo "$CMD" | grep -qE "git branch.*-D"; then
+# WHY \s-D(\s|$): requires whitespace before -D to avoid matching branch names
+# containing "-D" as substring (e.g. "git branch -m feature-Dev" was a false positive).
+# (\s|$) after -D prevents matching -Dfoo (not a real flag, but defensive).
+if echo "$CMD" | grep -qE "git branch.*\s-D(\s|$)"; then
   block "BLOCKED: git branch -D permanently deletes branch even if unmerged. Use -d for safe delete."
 fi
 
