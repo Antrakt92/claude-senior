@@ -31,7 +31,19 @@
       "Bash(eslint:*)",
       "Bash(prettier:*)",
       "Bash(gh:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "Agent",
+      "TodoWrite",
+      "WebFetch",
+      "WebSearch",
+      "NotebookEdit",
+      "Skill",
+      "LSP"
     ],
     "deny": [
       "Bash(rm -rf /)",
